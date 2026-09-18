@@ -1,0 +1,123 @@
+@page
+@model DeliciasDaNilda.Pages.Admin.Insumos.IndexModel
+@{
+    ViewData["Title"] = "Insumos";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">Insumos</h1>
+    <a asp-page="/Admin/Index" class="btn btn-outline-secondary btn-sm">Voltar ao painel</a>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.MensagemSucesso))
+{
+    <div class="alert alert-success">@Model.MensagemSucesso</div>
+}
+@if (!string.IsNullOrWhiteSpace(Model.MensagemErro))
+{
+    <div class="alert alert-danger">@Model.MensagemErro</div>
+}
+
+<div class="dn-insumos-grid mb-4">
+    <div class="dn-card p-3">
+        <h2 class="h6" style="color:var(--wine);">Novo ingrediente</h2>
+        <form method="post" asp-page-handler="NovoIngrediente">
+            <div class="mb-2">
+                <label asp-for="NovoIngrediente.Nome" class="form-label"></label>
+                <input asp-for="NovoIngrediente.Nome" class="form-control" placeholder="Ex: Leite condensado" required />
+            </div>
+            <div class="mb-2">
+                <label asp-for="NovoIngrediente.UnidadeMedida" class="form-label"></label>
+                <input asp-for="NovoIngrediente.UnidadeMedida" class="form-control" placeholder="kg, g, L, ml, un" required />
+            </div>
+            <div class="mb-3">
+                <label asp-for="NovoIngrediente.EstoqueMinimoAlerta" class="form-label"></label>
+                <input asp-for="NovoIngrediente.EstoqueMinimoAlerta" type="number" step="0.0001" min="0" class="form-control" placeholder="Ex: 5" />
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm w-100">Cadastrar</button>
+        </form>
+    </div>
+
+    <div class="dn-card p-3">
+        <h2 class="h6" style="color:var(--wine);">Registrar entrada</h2>
+        <form method="post" asp-page-handler="Entrada">
+            <div class="mb-2">
+                <label asp-for="Entrada.IngredienteId" class="form-label">Ingrediente</label>
+                <select asp-for="Entrada.IngredienteId" class="form-select" required>
+                    <option value="">Selecione</option>
+                    @foreach (var ingrediente in Model.Ingredientes)
+                    {
+                        <option value="@ingrediente.Id">@ingrediente.Nome (@ingrediente.UnidadeMedida)</option>
+                    }
+                </select>
+            </div>
+            <div class="mb-2">
+                <label asp-for="Entrada.Quantidade" class="form-label"></label>
+                <input asp-for="Entrada.Quantidade" type="number" step="0.0001" min="0.0001" class="form-control" placeholder="Ex: 12" required />
+            </div>
+            <div class="mb-3">
+                <label asp-for="Entrada.Motivo" class="form-label">Observação (opcional)</label>
+                <input asp-for="Entrada.Motivo" class="form-control" placeholder="Nota fiscal, fornecedor..." />
+            </div>
+            <button type="submit" class="btn btn-success btn-sm w-100">Registrar entrada</button>
+        </form>
+    </div>
+
+    <div class="dn-card p-3">
+        <h2 class="h6" style="color:var(--wine);">Registrar perda/ajuste</h2>
+        <form method="post" asp-page-handler="Ajuste">
+            <div class="mb-2">
+                <label asp-for="Ajuste.IngredienteId" class="form-label">Ingrediente</label>
+                <select asp-for="Ajuste.IngredienteId" class="form-select" required>
+                    <option value="">Selecione</option>
+                    @foreach (var ingrediente in Model.Ingredientes)
+                    {
+                        <option value="@ingrediente.Id">@ingrediente.Nome (@ingrediente.UnidadeMedida)</option>
+                    }
+                </select>
+            </div>
+            <div class="mb-2">
+                <label asp-for="Ajuste.Quantidade" class="form-label"></label>
+                <input asp-for="Ajuste.Quantidade" type="number" step="0.0001" min="0.0001" class="form-control" placeholder="Ex: 1.2" required />
+            </div>
+            <div class="mb-3">
+                <label asp-for="Ajuste.Motivo" class="form-label">Motivo (obrigatório)</label>
+                <input asp-for="Ajuste.Motivo" class="form-control" placeholder="Ex: validade vencida" required />
+            </div>
+            <button type="submit" class="btn btn-outline-danger btn-sm w-100">Registrar perda</button>
+        </form>
+    </div>
+</div>
+
+<div class="dn-card p-3">
+    <h2 class="h6" style="color:var(--wine);">Saldo atual de insumos</h2>
+    <div class="table-responsive">
+        <table class="dn-table w-100">
+            <thead>
+                <tr>
+                    <th>Ingrediente</th>
+                    <th>Saldo</th>
+                    <th>Unidade</th>
+                    <th>Estoque mínimo</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var ingrediente in Model.Ingredientes)
+                {
+                    <tr>
+                        <td>@ingrediente.Nome</td>
+                        <td style="font-weight:600;">@ingrediente.SaldoAtual.ToString("N4")</td>
+                        <td>@ingrediente.UnidadeMedida</td>
+                        <td>@(ingrediente.EstoqueMinimoAlerta?.ToString("N4") ?? "-")</td>
+                    </tr>
+                }
+                @if (Model.Ingredientes.Count == 0)
+                {
+                    <tr>
+                        <td colspan="4" class="text-center" style="color:var(--ink-soft);">Nenhum ingrediente cadastrado.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

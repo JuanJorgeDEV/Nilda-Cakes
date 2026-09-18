@@ -1,0 +1,69 @@
+@page
+@using DeliciasDaNilda.Domain.Enums
+@model DeliciasDaNilda.Pages.Admin.Pagamentos.RegistrarModel
+@{
+    ViewData["Title"] = "Pagamentos";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">Registrar pagamento</h1>
+    <a asp-page="/Admin/Index" class="btn btn-outline-secondary btn-sm">Voltar ao painel</a>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.MensagemSucesso))
+{
+    <div class="alert alert-success">@Model.MensagemSucesso</div>
+}
+@if (!string.IsNullOrWhiteSpace(Model.MensagemErro))
+{
+    <div class="alert alert-danger">@Model.MensagemErro</div>
+}
+
+<div class="dn-card p-3" style="max-width:520px;">
+    <form method="post">
+        <div asp-validation-summary="All" class="text-danger"></div>
+
+        <div class="mb-3">
+            <label asp-for="Entrada.PedidoId" class="form-label">Pedido em aberto</label>
+            <select asp-for="Entrada.PedidoId" class="form-select" required>
+                <option value="">Selecione um pedido</option>
+                @foreach (var pedido in Model.PedidosEmAberto)
+                {
+                    <option value="@pedido.Id" selected="@(pedido.Id == Model.PedidoId)">
+                        @pedido.Cliente.NomeCompleto — @pedido.Sabor.Nome — @pedido.ValorTotal.ToString("C")
+                    </option>
+                }
+            </select>
+        </div>
+
+        @if (Model.PedidoSelecionado is not null)
+        {
+            var jaPago = Model.PedidoSelecionado.Pagamentos.Sum(p => p.Valor);
+            var restante = Model.PedidoSelecionado.ValorTotal - jaPago;
+            <div class="dn-resumo mb-3">
+                <div class="dn-resumo-linha"><span>Valor total</span><strong>@Model.PedidoSelecionado.ValorTotal.ToString("C")</strong></div>
+                <div class="dn-resumo-linha"><span>Já pago</span><strong style="color:var(--ok);">@jaPago.ToString("C")</strong></div>
+                <div class="dn-resumo-linha"><span>Restante</span><strong style="color:var(--wine);font-size:15px;">@restante.ToString("C")</strong></div>
+            </div>
+        }
+
+        <div class="mb-3">
+            <label asp-for="Entrada.Tipo" class="form-label">Tipo de pagamento</label>
+            <select asp-for="Entrada.Tipo" asp-items="Html.GetEnumSelectList<TipoPagamento>()" class="form-select" required>
+                <option value="">Selecione</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Entrada.Valor" class="form-label">Valor recebido (R$)</label>
+            <input asp-for="Entrada.Valor" type="number" step="0.01" min="0.01" class="form-control" placeholder="Ex: 50,00" required />
+        </div>
+
+        <div class="mb-4">
+            <label asp-for="Entrada.FormaPagamento" class="form-label"></label>
+            <input asp-for="Entrada.FormaPagamento" class="form-control" placeholder="Dinheiro, Pix, Cartão..." />
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Registrar pagamento</button>
+    </form>
+</div>

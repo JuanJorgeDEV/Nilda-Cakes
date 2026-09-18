@@ -1,0 +1,111 @@
+@page
+@model DeliciasDaNilda.Pages.Cliente.NovoPedidoModel
+@{
+    ViewData["Title"] = "Novo pedido";
+    ViewData["Shell"] = "cliente";
+}
+
+<div class="dn-eyebrow mb-2">Novo pedido</div>
+<div class="dn-card-highlight p-4">
+    <h1 class="h4 mb-1">Novo pedido</h1>
+    <p style="color:var(--ink-soft);font-size:14px;">Olá, @Model.ClienteNome. Escolha o sabor, o peso e a data de entrega.</p>
+
+    <form method="post" id="form-novo-pedido">
+        <div asp-validation-summary="All" class="text-danger"></div>
+
+        <div class="mb-3">
+            <label asp-for="Entrada.SaborId" class="form-label"></label>
+            <select asp-for="Entrada.SaborId" id="select-sabor" class="form-select" required>
+                <option value="">Selecione um sabor</option>
+                @foreach (var sabor in Model.SaboresDisponiveis)
+                {
+                    <option value="@sabor.Id" data-preco-kg="@sabor.PrecoPorKg.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                        @sabor.Nome — R$ @sabor.PrecoPorKg.ToString("N2") / kg
+                    </option>
+                }
+            </select>
+            <span asp-validation-for="Entrada.SaborId" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Entrada.PesoKg" class="form-label"></label>
+            <input asp-for="Entrada.PesoKg" id="input-peso" type="number" step="0.01" min="0.01" class="form-control" placeholder="Ex: 1.5" required />
+            <span asp-validation-for="Entrada.PesoKg" class="text-danger"></span>
+        </div>
+
+        <div class="mb-4 dn-valor-total-card dn-fade-in" id="valor-total-preview">
+            <div class="dn-valor-total-label">Valor total</div>
+            <div class="dn-valor-total-valor" id="valor-total-valor">R$ 0,00</div>
+            <div class="dn-valor-total-sub">peso × preço/kg</div>
+        </div>
+
+        <div class="mb-1">
+            <label asp-for="Entrada.DataEntrega" class="form-label"></label>
+            <select asp-for="Entrada.DataEntrega" class="form-select" required>
+                <option value="">Selecione uma data</option>
+                @foreach (var opcao in Model.OpcoesDeData)
+                {
+                    if (opcao.Bloqueada)
+                    {
+                        <option value="@opcao.Data.ToString("yyyy-MM-dd")" disabled>
+                            @opcao.Data.ToString("dd/MM/yyyy (ddd)") — indisponível (agenda lotada)
+                        </option>
+                    }
+                    else
+                    {
+                        <option value="@opcao.Data.ToString("yyyy-MM-dd")">
+                            @opcao.Data.ToString("dd/MM/yyyy (ddd)")
+                        </option>
+                    }
+                }
+            </select>
+            <span asp-validation-for="Entrada.DataEntrega" class="text-danger"></span>
+            <div class="form-text mb-3" style="color:var(--ink-soft);">
+                Só aparecem datas com pelo menos 3 dias úteis de antecedência. Datas já lotadas
+                (3 bolos) ficam marcadas como indisponíveis.
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Entrada.Observacoes" class="form-label"></label>
+            <textarea asp-for="Entrada.Observacoes" class="form-control" rows="3" placeholder="Alguma mensagem no bolo, decoração especial..."></textarea>
+            <span asp-validation-for="Entrada.Observacoes" class="text-danger"></span>
+        </div>
+
+        <div class="dn-notice-rose mb-4">
+            Seu pedido ficará como <strong>Pendente de Confirmação</strong>. O horário de retirada é
+            combinado depois, pelo WhatsApp.
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100 btn-lg">Confirmar pedido</button>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Cálculo de preço em tempo real: Valor Total = Peso x Preço/kg (RN03).
+        (function () {
+            var selectSabor = document.getElementById('select-sabor');
+            var inputPeso = document.getElementById('input-peso');
+            var valor = document.getElementById('valor-total-valor');
+
+            function atualizarPreview() {
+                var opcao = selectSabor.options[selectSabor.selectedIndex];
+                var precoKg = opcao ? parseFloat(opcao.getAttribute('data-preco-kg')) : NaN;
+                var peso = parseFloat(inputPeso.value);
+
+                if (!isNaN(precoKg) && !isNaN(peso) && peso > 0) {
+                    var total = precoKg * peso;
+                    valor.textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+                } else {
+                    valor.textContent = 'R$ 0,00';
+                }
+            }
+
+            selectSabor.addEventListener('change', atualizarPreview);
+            inputPeso.addEventListener('input', atualizarPreview);
+            atualizarPreview();
+        })();
+    </script>
+}

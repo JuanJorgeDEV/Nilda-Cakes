@@ -1,0 +1,550 @@
+/* ==========================================================================
+   Delícias da Nilda — Design tokens e tema visual
+   Baseado no handoff de design (design_handoff_delicias_da_nilda/README.md)
+   ========================================================================== */
+
+:root {
+  --wine: #7A2038;
+  --wine-dark: #54152A;
+  --rose: #C97C90;
+  --rose-light: #F3DCE2;
+  --cream: #FBF3EA;
+  --cream-2: #F3E6D8;
+  --ink: #3A2226;
+  --ink-soft: #7A5C60;
+  --gold: #B8902F;
+  --gold-light: #EFDCA9;
+
+  --ok: #3F7D53;
+  --ok-bg: #E4F0E7;
+  --warn: #8A6300;
+  --warn-bg: #FBF1D9;
+  --muted: #7A6B65;
+  --muted-bg: #ECE3DC;
+  --info: #4C6B8A;
+  --info-bg: #E7EEF4;
+  --danger: #B0433F;
+  --danger-bg: #FCEAE8;
+
+  /* Mapeamento para variáveis Bootstrap, para herdar em btn-primary etc. */
+  --bs-primary: var(--wine);
+  --bs-primary-rgb: 122, 32, 56;
+  --bs-body-bg: var(--cream);
+  --bs-body-color: var(--ink);
+  --bs-body-font-family: 'Poppins', sans-serif;
+  --bs-link-color: var(--wine);
+  --bs-link-hover-color: var(--wine-dark);
+}
+
+html, body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Tipografia -------------------------------------------------------------- */
+
+.dn-wordmark {
+  font-family: 'Yellowtail', cursive;
+  color: var(--wine);
+  line-height: 1;
+}
+
+h1, h2, h3, .dn-title {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  color: var(--wine);
+}
+
+.dn-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+/* Botões -------------------------------------------------------------------*/
+
+.btn-primary {
+  --bs-btn-bg: var(--wine);
+  --bs-btn-border-color: var(--wine);
+  --bs-btn-hover-bg: var(--wine-dark);
+  --bs-btn-hover-border-color: var(--wine-dark);
+  --bs-btn-active-bg: var(--wine-dark);
+  --bs-btn-active-border-color: var(--wine-dark);
+  --bs-btn-color: #fff;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-active-color: #fff;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--wine);
+  --bs-btn-border-color: var(--wine);
+  --bs-btn-hover-bg: var(--wine);
+  --bs-btn-hover-border-color: var(--wine);
+  --bs-btn-active-bg: var(--wine);
+  --bs-btn-active-border-color: var(--wine);
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.btn-success {
+  --bs-btn-bg: var(--ok);
+  --bs-btn-border-color: var(--ok);
+  --bs-btn-hover-bg: #35673f;
+  --bs-btn-hover-border-color: #35673f;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.btn-outline-danger {
+  --bs-btn-color: var(--danger);
+  --bs-btn-border-color: var(--danger);
+  --bs-btn-hover-bg: var(--danger);
+  --bs-btn-hover-border-color: var(--danger);
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.btn-outline-secondary {
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.btn, .form-control, .form-select {
+  border-radius: 10px;
+}
+
+.btn-lg {
+  border-radius: 12px;
+}
+
+/* Formulários --------------------------------------------------------------*/
+
+.form-control, .form-select {
+  border-color: var(--cream-2);
+  background-color: var(--cream);
+  color: var(--ink);
+  font-family: 'Poppins', sans-serif;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--rose);
+  box-shadow: 0 0 0 0.2rem rgba(122, 32, 56, 0.15);
+  background-color: var(--cream);
+  color: var(--ink);
+}
+
+.form-label {
+  font-weight: 600;
+  font-size: .875rem;
+  color: var(--ink);
+}
+
+/* Cards ----------------------------------------------------------------- */
+
+.dn-card {
+  background: #fff;
+  border: 1px solid var(--cream-2);
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(90, 20, 40, 0.06);
+}
+
+.dn-card-highlight {
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(90, 20, 40, 0.08);
+}
+
+/* Badges de status -------------------------------------------------------*/
+
+.dn-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 9999px;
+  padding: 4px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dn-badge-pendente { background: var(--warn-bg); color: var(--warn); }
+.dn-badge-confirmado { background: var(--ok-bg); color: var(--ok); }
+.dn-badge-cancelado { background: var(--muted-bg); color: var(--muted); }
+.dn-badge-concluido { background: var(--info-bg); color: var(--info); }
+
+/* Tabelas (admin) ----------------------------------------------------------*/
+
+.dn-table thead th {
+  text-align: left;
+  font-size: 11.5px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--cream-2);
+  font-weight: 600;
+}
+
+.dn-table tbody td {
+  padding: 12px;
+  font-size: 13.5px;
+  border-bottom: 1px solid var(--cream-2);
+  color: var(--ink);
+  vertical-align: middle;
+}
+
+/* Layout do fluxo do cliente (mobile-first, ~460px) ------------------------*/
+
+.dn-cliente-shell {
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 28px 12px 64px;
+}
+
+.dn-brand-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 28px;
+  text-align: center;
+}
+
+.dn-brand-header img {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 6px 18px rgba(90, 20, 40, 0.25);
+}
+
+.dn-brand-header .dn-wordmark {
+  font-size: 36px;
+  margin-top: 4px;
+}
+
+.dn-brand-header .dn-tagline {
+  font-size: 13px;
+  color: var(--ink-soft);
+  letter-spacing: .02em;
+}
+
+/* Card de valor total (destaque em gradiente vinho) -------------------------*/
+
+.dn-valor-total-card {
+  background: linear-gradient(135deg, var(--wine), var(--wine-dark));
+  border-radius: 16px;
+  padding: 18px 20px;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(122, 32, 56, 0.25);
+}
+
+.dn-valor-total-card .dn-valor-total-label {
+  font-size: 11.5px;
+  color: var(--gold-light);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.dn-valor-total-card .dn-valor-total-valor {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  font-size: 34px;
+  color: #fff;
+}
+
+.dn-valor-total-card .dn-valor-total-sub {
+  font-size: 11.5px;
+  color: #e9c9d2;
+  margin-top: 4px;
+}
+
+/* Aviso "Pendente de Confirmação" (fluxo do cliente) -----------------------*/
+
+.dn-notice-rose {
+  background: var(--rose-light);
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--wine-dark);
+  line-height: 1.5;
+}
+
+/* Resumo de confirmação -----------------------------------------------------*/
+
+.dn-resumo {
+  background: var(--cream);
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.dn-resumo-linha {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  font-size: 13px;
+  border-bottom: 1px solid var(--cream-2);
+}
+
+.dn-resumo-linha:last-child {
+  border-bottom: none;
+}
+
+.dn-resumo-linha span:first-child {
+  color: var(--ink-soft);
+}
+
+/* Formas desenhadas (check / alerta), sem ícones de biblioteca --------------*/
+
+.dn-shape-circle {
+  position: relative;
+  border-radius: 50%;
+  margin: 0 auto;
+}
+
+.dn-shape-check-bg {
+  background: var(--gold-light);
+  width: 56px;
+  height: 56px;
+}
+
+.dn-shape-check-bg.dn-shape-check-ok {
+  background: var(--ok);
+}
+
+.dn-shape-check-bar-short {
+  position: absolute;
+  left: 15px;
+  top: 31px;
+  width: 12px;
+  height: 4px;
+  background: var(--wine);
+  border-radius: 2px;
+  transform: rotate(45deg);
+  transform-origin: left center;
+}
+
+.dn-shape-check-bar-long {
+  position: absolute;
+  left: 22px;
+  top: 26px;
+  width: 22px;
+  height: 4px;
+  background: var(--wine);
+  border-radius: 2px;
+  transform: rotate(-45deg);
+  transform-origin: left center;
+}
+
+.dn-shape-check-ok .dn-shape-check-bar-short,
+.dn-shape-check-ok .dn-shape-check-bar-long {
+  background: #fff;
+}
+
+.dn-shape-check-ok .dn-shape-check-bar-short {
+  left: 12px;
+  top: 24px;
+  width: 9px;
+  height: 3.5px;
+}
+
+.dn-shape-check-ok .dn-shape-check-bar-long {
+  left: 17px;
+  top: 20px;
+  width: 17px;
+  height: 3.5px;
+}
+
+.dn-shape-alert-bg {
+  width: 40px;
+  height: 40px;
+  background: var(--danger);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.dn-shape-alert-bg .bar {
+  width: 4px;
+  height: 15px;
+  background: #fff;
+  border-radius: 2px;
+  margin-bottom: 3px;
+}
+
+.dn-shape-alert-bg .dot {
+  width: 4px;
+  height: 4px;
+  background: #fff;
+  border-radius: 50%;
+}
+
+.dn-shape-close {
+  position: relative;
+}
+
+.dn-shape-close .bar {
+  position: absolute;
+  left: 9px;
+  top: 16px;
+  width: 14px;
+  height: 2px;
+  background: var(--danger);
+}
+
+.dn-shape-close .bar:first-child { transform: rotate(45deg); }
+.dn-shape-close .bar:last-child { transform: rotate(-45deg); }
+
+/* Layout do painel admin (desktop-first, responsivo) -----------------------*/
+
+.dn-admin-shell {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+.dn-admin-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.dn-admin-header img {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 4px 12px rgba(90, 20, 40, 0.25);
+}
+
+.dn-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.dn-panel-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 22px 18px;
+  box-shadow: 0 6px 18px rgba(90, 20, 40, 0.06);
+  border: 1px solid var(--cream-2);
+  text-align: center;
+  text-decoration: none;
+  display: block;
+  color: inherit;
+}
+
+.dn-panel-card:hover {
+  color: inherit;
+  box-shadow: 0 8px 22px rgba(90, 20, 40, 0.12);
+}
+
+.dn-panel-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  margin: 0 auto 12px;
+}
+
+.dn-panel-card-title {
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.dn-panel-card-sub {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.dn-insumos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 16px;
+}
+
+.dn-sabores-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(280px, 1.3fr);
+  gap: 18px;
+}
+
+@media (max-width: 900px) {
+  .dn-sabores-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dn-alert-quadro {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 14px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.dn-alert-quadro .dn-alert-item-label {
+  font-size: 11px;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+}
+
+.dn-alert-quadro .dn-alert-item-valor {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.dn-fade-in {
+  animation: dnFade .4s ease both;
+}
+
+@keyframes dnFade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Login (não usa _Layout, precisa de identidade própria) --------------------*/
+
+.dn-login-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cream);
+  padding: 24px 16px;
+}
+
+.dn-login-card {
+  max-width: 380px;
+  width: 100%;
+  background: #fff;
+  border-radius: 20px;
+  padding: 32px 28px;
+  box-shadow: 0 10px 30px rgba(90, 20, 40, 0.08);
+  text-align: center;
+}
+
+.dn-login-card img {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 12px;
+}
+
+.dn-login-card .dn-login-form {
+  text-align: left;
+}

@@ -1,0 +1,153 @@
+@page
+@model DeliciasDaNilda.Pages.Admin.Sabores.CadastroModel
+@{
+    ViewData["Title"] = "Sabores e ficha técnica";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">Sabores e ficha técnica</h1>
+    <a asp-page="/Admin/Index" class="btn btn-outline-secondary btn-sm">Voltar ao painel</a>
+</div>
+
+<div class="dn-sabores-grid">
+    <div class="dn-card p-3">
+        <h2 class="h6" style="color:var(--wine);font-family:'Playfair Display',serif;font-weight:700;">Novo sabor</h2>
+
+        @if (Model.Ingredientes.Count == 0)
+        {
+            <div class="alert alert-warning">
+                Nenhum ingrediente cadastrado ainda. Cadastre insumos em
+                <a asp-page="/Admin/Insumos/Index">Insumos</a> antes de montar a ficha técnica.
+            </div>
+        }
+
+        <form method="post">
+            <div asp-validation-summary="All" class="text-danger"></div>
+
+            <div class="mb-3">
+                <label asp-for="Entrada.Nome" class="form-label"></label>
+                <input asp-for="Entrada.Nome" class="form-control" placeholder="Ex: Sensação com Brigadeiro" required />
+                <span asp-validation-for="Entrada.Nome" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Entrada.PrecoPorKg" class="form-label"></label>
+                <input asp-for="Entrada.PrecoPorKg" type="number" step="0.01" min="0.01" class="form-control" required />
+                <span asp-validation-for="Entrada.PrecoPorKg" class="text-danger"></span>
+            </div>
+
+            <div class="form-check mb-3">
+                <input asp-for="Entrada.Disponivel" class="form-check-input" />
+                <label asp-for="Entrada.Disponivel" class="form-check-label"></label>
+            </div>
+
+            <div class="dn-eyebrow mb-2" style="letter-spacing:.02em;text-transform:none;font-size:12.5px;font-weight:600;color:var(--ink);">
+                Ficha técnica (ingredientes por kg)
+            </div>
+            <div id="itens-ficha-tecnica">
+                @for (var i = 0; i < Model.Entrada.Itens.Count; i++)
+                {
+                    <div class="row g-2 mb-2 linha-item-ficha align-items-center">
+                        <div class="col-6">
+                            <select name="Entrada.Itens[@i].IngredienteId" class="form-select">
+                                <option value="0">Selecione o ingrediente</option>
+                                @foreach (var ingrediente in Model.Ingredientes)
+                                {
+                                    <option value="@ingrediente.Id">@ingrediente.Nome (@ingrediente.UnidadeMedida)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-4">
+                            <input name="Entrada.Itens[@i].QuantidadePorKg" type="number" step="0.0001" min="0" class="form-control" placeholder="Quantidade por kg" />
+                        </div>
+                        <div class="col-2">
+                            <button type="button" class="btn btn-outline-danger w-100 btn-remover-linha">Remover</button>
+                        </div>
+                    </div>
+                }
+            </div>
+            <button type="button" id="btn-adicionar-linha" class="btn btn-sm mb-3" style="background:var(--cream-2);color:var(--wine-dark);font-weight:600;border:none;">
+                + adicionar ingrediente
+            </button>
+
+            <div>
+                <button type="submit" class="btn btn-primary w-100">Salvar sabor</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="dn-card p-3">
+        <h2 class="h6" style="color:var(--wine);font-family:'Playfair Display',serif;font-weight:700;">Sabores cadastrados</h2>
+        @foreach (var sabor in Model.SaboresCadastrados)
+        {
+            <div style="border:1px solid var(--cream-2);border-radius:12px;padding:14px 16px;margin-bottom:10px;">
+                <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-2">
+                    <div style="font-weight:600;font-size:14px;">@sabor.Nome</div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span style="font-size:13px;color:var(--gold);font-weight:600;">R$ @sabor.PrecoPorKg.ToString("N2")/kg</span>
+                        @if (sabor.Disponivel)
+                        {
+                            <span class="dn-badge dn-badge-confirmado">Disponível</span>
+                        }
+                        else
+                        {
+                            <span class="dn-badge dn-badge-cancelado">Pausado</span>
+                        }
+                    </div>
+                </div>
+                <div style="font-size:12.5px;color:var(--ink-soft);">
+                    @if (sabor.FichaTecnica is not null && sabor.FichaTecnica.Itens.Count > 0)
+                    {
+                        @string.Join(" · ", sabor.FichaTecnica.Itens.Select(item => $"{item.Ingrediente.Nome} {item.QuantidadePorKg.ToString("N4")} {item.Ingrediente.UnidadeMedida}/kg"))
+                    }
+                    else
+                    {
+                        <span>Sem ficha técnica</span>
+                    }
+                </div>
+            </div>
+        }
+        @if (Model.SaboresCadastrados.Count == 0)
+        {
+            <p style="color:var(--ink-soft);">Nenhum sabor cadastrado ainda.</p>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var container = document.getElementById('itens-ficha-tecnica');
+            var btnAdicionar = document.getElementById('btn-adicionar-linha');
+
+            function reindexar() {
+                var linhas = container.querySelectorAll('.linha-item-ficha');
+                linhas.forEach(function (linha, index) {
+                    linha.querySelectorAll('select, input').forEach(function (campo) {
+                        campo.name = campo.name.replace(/Entrada\.Itens\[\d+\]/, 'Entrada.Itens[' + index + ']');
+                    });
+                });
+            }
+
+            btnAdicionar.addEventListener('click', function () {
+                var primeiraLinha = container.querySelector('.linha-item-ficha');
+                var novaLinha = primeiraLinha.cloneNode(true);
+                novaLinha.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
+                novaLinha.querySelectorAll('input').forEach(function (i) { i.value = ''; });
+                container.appendChild(novaLinha);
+                reindexar();
+            });
+
+            container.addEventListener('click', function (evento) {
+                if (evento.target.classList.contains('btn-remover-linha')) {
+                    var linhas = container.querySelectorAll('.linha-item-ficha');
+                    if (linhas.length > 1) {
+                        evento.target.closest('.linha-item-ficha').remove();
+                        reindexar();
+                    }
+                }
+            });
+        })();
+    </script>
+}

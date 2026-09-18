@@ -1,0 +1,50 @@
+@page
+@model DeliciasDaNilda.Pages.Admin.IndexModel
+@{
+    ViewData["Title"] = "Painel ADM";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h4 mb-0">Como está a loja hoje?</h1>
+    <form method="post" asp-page-handler="Logout">
+        <button type="submit" class="btn btn-outline-secondary btn-sm">Sair (@Model.AdministradorNome)</button>
+    </form>
+</div>
+
+<div class="dn-panel-grid">
+    <a asp-page="/Admin/Pedidos/Index" class="dn-panel-card">
+        <div class="dn-panel-card-icon" style="background:var(--rose-light);"></div>
+        <div class="dn-panel-card-title">Pedidos</div>
+        <div class="dn-panel-card-sub">Confirmação e cancelamento</div>
+    </a>
+    <a asp-page="/Admin/Sabores/Cadastro" class="dn-panel-card">
+        <div class="dn-panel-card-icon" style="background:var(--gold-light);"></div>
+        <div class="dn-panel-card-title">Sabores e ficha técnica</div>
+        <div class="dn-panel-card-sub">Ingredientes por kg</div>
+    </a>
+    <a asp-page="/Admin/Insumos/Index" class="dn-panel-card">
+        <div class="dn-panel-card-icon" style="background:var(--cream-2);"></div>
+        <div class="dn-panel-card-title">Insumos</div>
+        <div class="dn-panel-card-sub">Entradas e perdas</div>
+    </a>
+    <a asp-page="/Admin/Agenda/Index" class="dn-panel-card">
+        <div class="dn-panel-card-icon" style="background:var(--rose-light);"></div>
+        <div class="dn-panel-card-title">Agenda do dia</div>
+        <div class="dn-panel-card-sub">Pedidos e ficha técnica total</div>
+    </a>
+    <a asp-page="/Admin/Estoque/Alertas" class="dn-panel-card">
+        <div class="dn-panel-card-icon" style="background:#FCEAE8;"></div>
+        <div class="dn-panel-card-title">Alerta de reposição</div>
+        <div class="dn-panel-card-sub">Projeção de estoque</div>
+    </a>
+    <a asp-page="/Admin/Pagamentos/Registrar" class="dn-panel-card">
+        <div class="dn-panel-card-icon" style="background:var(--gold-light);"></div>
+        <div class="dn-panel-card-title">Pagamentos</div>
+        <div class="dn-panel-card-sub">Baixa financeira por pedido</div>
+    </a>
+    <a asp-page="/Admin/WhatsAppBot/Index" class="dn-panel-card">
+        <div class="dn-panel-card-icon" style="background:var(--cream-2);"></div>
+        <div class="dn-panel-card-title">Atendimento automático</div>
+        <div class="dn-panel-card-sub">Ligar/desligar pedidos pelo WhatsApp</div>
+    </a>
+</div>

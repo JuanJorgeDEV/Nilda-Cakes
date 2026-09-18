@@ -1,0 +1,21 @@
+# Bot de WhatsApp (Node.js)
+whatsapp-bot/node_modules/
+whatsapp-bot/auth_info/
+whatsapp-bot/.env
+
+# .NET
+bin/
+obj/
+.vs/
+*.user
+
+# Segredos locais (usar appsettings.Development.example.json como modelo)
+src/DeliciasDaNilda/appsettings.Development.json
+
+# Material de trabalho local (fora do repositorio publico)
+docs/
+CLAUDE.md
+.claude/
+Prompt e especificações de design/
+Prompt e especificações de design.zip
+adminindex.html

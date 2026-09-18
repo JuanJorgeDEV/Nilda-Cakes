@@ -1,0 +1,92 @@
+@page
+@model DeliciasDaNilda.Pages.Admin.Agenda.IndexModel
+@{
+    ViewData["Title"] = "Agenda do dia";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">Agenda do dia</h1>
+    <a asp-page="/Admin/Index" class="btn btn-outline-secondary btn-sm">Voltar ao painel</a>
+</div>
+
+<div class="dn-card p-3 mb-4">
+    <form method="get" class="d-flex align-items-center gap-3 flex-wrap mb-0">
+        <label asp-for="Data" class="form-label mb-0">Data:</label>
+        <input asp-for="Data" type="date" class="form-control" style="max-width:180px;" />
+        <button type="submit" class="btn btn-secondary btn-sm">Ver agenda</button>
+    </form>
+</div>
+
+@if (Model.Agenda is not null)
+{
+    <div class="dn-card p-3 mb-4">
+        <h2 class="h6" style="color:var(--wine);">Pedidos em @Model.Agenda.Data.ToString("dd/MM/yyyy")</h2>
+        <div class="table-responsive">
+            <table class="dn-table w-100">
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>WhatsApp</th>
+                        <th>Sabor</th>
+                        <th>Peso</th>
+                        <th>Retirada</th>
+                        <th>Status</th>
+                        <th>Pagamento</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var pedido in Model.Agenda.Pedidos)
+                    {
+                        var badge = DeliciasDaNilda.Pages.Shared.StatusBadgeHelper.Pedido(pedido.StatusPedido);
+                        var badgePagamento = DeliciasDaNilda.Pages.Shared.StatusBadgeHelper.Pagamento(pedido.StatusPagamento);
+                        <tr>
+                            <td>@pedido.ClienteNomeCompleto</td>
+                            <td>@pedido.ClienteWhatsApp</td>
+                            <td>@pedido.Sabor</td>
+                            <td>@pedido.Peso.ToString("N3") kg</td>
+                            <td>@(pedido.HorarioRetirada?.ToString("HH:mm") ?? "A combinar")</td>
+                            <td><span class="dn-badge @badge.CssClass">● @badge.Label</span></td>
+                            <td><span class="dn-badge @badgePagamento.CssClass">● @badgePagamento.Label</span></td>
+                        </tr>
+                    }
+                    @if (Model.Agenda.Pedidos.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center" style="color:var(--ink-soft);">Nenhum pedido para esta data.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="dn-card p-3">
+        <h2 class="h6 mb-1" style="color:var(--wine);">Ficha técnica total do dia</h2>
+        <p style="font-size:12px;color:var(--ink-soft);">Soma dos ingredientes necessários para produzir todos os pedidos do dia.</p>
+        <div class="table-responsive">
+            <table class="dn-table w-100" style="max-width:500px;">
+                <thead>
+                    <tr>
+                        <th>Ingrediente</th>
+                        <th>Quantidade total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var ingrediente in Model.Agenda.FichaTecnicaTotalDoDia)
+                    {
+                        <tr>
+                            <td>@ingrediente.IngredienteNome</td>
+                            <td style="font-weight:600;">@ingrediente.QuantidadeTotalNecessaria.ToString("N4") @ingrediente.UnidadeMedida</td>
+                        </tr>
+                    }
+                    @if (Model.Agenda.FichaTecnicaTotalDoDia.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="2" class="text-center" style="color:var(--ink-soft);">Sem consumo projetado.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Delícias da Nilda</title>
+    <script type="importmap"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Yellowtail&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/theme.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/DeliciasDaNilda.styles.css" asp-append-version="true" />
+</head>
+<body>
+    @{
+        var shell = ViewData["Shell"] as string ?? "admin";
+        var isCliente = shell == "cliente";
+    }
+    <header class="@(isCliente ? "dn-cliente-shell" : "dn-admin-shell")" style="padding-bottom:0;">
+        @if (isCliente)
+        {
+            <div class="dn-brand-header">
+                <img src="~/images/logo.jpeg" alt="Delícias da Nilda" />
+                <div class="dn-wordmark">Delícias da Nilda</div>
+                <div class="dn-tagline">bolos artesanais feitos à mão · encomendas</div>
+            </div>
+        }
+        else
+        {
+            <div class="dn-admin-header mb-4">
+                <img src="~/images/logo.jpeg" alt="Delícias da Nilda" />
+                <div>
+                    <div class="dn-wordmark" style="font-size:26px;">Delícias da Nilda</div>
+                    <div style="font-size:12px;color:var(--ink-soft);">painel da loja</div>
+                </div>
+            </div>
+        }
+    </header>
+    <div class="@(isCliente ? "dn-cliente-shell" : "dn-admin-shell")" style="padding-top:0;">
+        <main role="main">
+            @RenderBody()
+        </main>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

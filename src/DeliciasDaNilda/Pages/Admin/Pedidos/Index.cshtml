@@ -1,0 +1,82 @@
+@page
+@using DeliciasDaNilda.Domain.Enums
+@model DeliciasDaNilda.Pages.Admin.Pedidos.IndexModel
+@{
+    ViewData["Title"] = "Pedidos";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">Pedidos</h1>
+    <a asp-page="/Admin/Index" class="btn btn-outline-secondary btn-sm">Voltar ao painel</a>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.MensagemErro))
+{
+    <div class="alert alert-danger">@Model.MensagemErro</div>
+}
+
+<div class="dn-card p-3">
+    <form method="get" class="d-flex justify-content-end mb-3">
+        <select asp-for="FiltroStatus" asp-items="Html.GetEnumSelectList<StatusPedido>()" class="form-select" style="max-width:260px;" onchange="this.form.submit()">
+            <option value="">Todos os status</option>
+        </select>
+    </form>
+
+    <div class="table-responsive">
+        <table class="dn-table w-100">
+            <thead>
+                <tr>
+                    <th>Cliente</th>
+                    <th>WhatsApp</th>
+                    <th>Sabor</th>
+                    <th>Peso</th>
+                    <th>Valor</th>
+                    <th>Entrega</th>
+                    <th>Status</th>
+                    <th>Pagamento</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var pedido in Model.Pedidos)
+                {
+                    var badge = DeliciasDaNilda.Pages.Shared.StatusBadgeHelper.Pedido(pedido.StatusPedido);
+                    var badgePagamento = DeliciasDaNilda.Pages.Shared.StatusBadgeHelper.Pagamento(pedido.StatusPagamento);
+                    <tr>
+                        <td>@pedido.Cliente.NomeCompleto</td>
+                        <td>@pedido.Cliente.WhatsApp</td>
+                        <td>@pedido.Sabor.Nome</td>
+                        <td>@pedido.Peso.ToString("N3") kg</td>
+                        <td style="font-weight:600;">@pedido.ValorTotal.ToString("C")</td>
+                        <td>@pedido.DataEntrega.ToString("dd/MM/yyyy")</td>
+                        <td><span class="dn-badge @badge.CssClass">● @badge.Label</span></td>
+                        <td><span class="dn-badge @badgePagamento.CssClass">● @badgePagamento.Label</span></td>
+                        <td>
+                            <div class="d-flex gap-1 flex-wrap">
+                                @if (pedido.StatusPedido == StatusPedido.PendenteConfirmacao)
+                                {
+                                    <form method="post" asp-page-handler="Confirmar" asp-route-id="@pedido.Id">
+                                        <button type="submit" class="btn btn-success btn-sm">Confirmar</button>
+                                    </form>
+                                }
+                                @if (pedido.StatusPedido is StatusPedido.PendenteConfirmacao or StatusPedido.Confirmado)
+                                {
+                                    <form method="post" asp-page-handler="Cancelar" asp-route-id="@pedido.Id">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm">Cancelar</button>
+                                    </form>
+                                }
+                                <a asp-page="/Admin/Pagamentos/Registrar" asp-route-pedidoId="@pedido.Id" class="btn btn-outline-primary btn-sm">Pagamento</a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                @if (Model.Pedidos.Count == 0)
+                {
+                    <tr>
+                        <td colspan="9" class="text-center" style="color:var(--ink-soft);">Nenhum pedido encontrado.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,46 @@
+@page "{id:int}"
+@model DeliciasDaNilda.Pages.Cliente.ConfirmacaoModel
+@{
+    ViewData["Title"] = "Pedido confirmado";
+    ViewData["Shell"] = "cliente";
+}
+
+<div class="dn-eyebrow mb-2">Confirmação</div>
+
+@if (Model.Pedido is not null)
+{
+    var pedido = Model.Pedido;
+    var badge = DeliciasDaNilda.Pages.Shared.StatusBadgeHelper.Pedido(pedido.StatusPedido);
+    <div class="dn-card-highlight p-4 text-center">
+        <div class="dn-shape-circle dn-shape-check-bg mb-3">
+            <div class="dn-shape-check-bar-short"></div>
+            <div class="dn-shape-check-bar-long"></div>
+        </div>
+        <h1 class="h4 mb-2">Pedido recebido!</h1>
+        <p style="color:var(--ink-soft);font-size:14px;">
+            Assim que a Nilda confirmar pelo WhatsApp, te avisamos por lá.
+        </p>
+
+        <div class="dn-resumo text-start mb-3">
+            <div class="dn-resumo-linha"><span>Pedido</span><strong>#@pedido.Id</strong></div>
+            <div class="dn-resumo-linha"><span>Sabor</span><strong>@pedido.Sabor.Nome</strong></div>
+            <div class="dn-resumo-linha"><span>Peso</span><strong>@pedido.Peso.ToString("N3") kg</strong></div>
+            <div class="dn-resumo-linha"><span>Valor total</span><strong style="color:var(--wine);">@pedido.ValorTotal.ToString("C")</strong></div>
+            <div class="dn-resumo-linha"><span>Data de entrega</span><strong>@pedido.DataEntrega.ToString("dd/MM/yyyy")</strong></div>
+            @if (!string.IsNullOrWhiteSpace(pedido.Observacoes))
+            {
+                <div class="dn-resumo-linha"><span>Observações</span><strong style="text-align:right;max-width:60%;">@pedido.Observacoes</strong></div>
+            }
+        </div>
+
+        <div class="d-flex justify-content-center mb-3">
+            <span class="dn-badge @badge.CssClass">● @badge.Label</span>
+        </div>
+
+        <p style="font-size:12.5px;color:var(--ink-soft);">
+            A confirmação do pedido e o pagamento são combinados via WhatsApp ou direto na retirada.
+        </p>
+
+        <a asp-page="/Cliente/NovoPedido" class="btn btn-outline-primary w-100 btn-lg">Fazer novo pedido</a>
+    </div>
+}

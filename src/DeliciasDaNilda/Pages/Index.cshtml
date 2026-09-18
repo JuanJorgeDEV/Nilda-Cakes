@@ -1,0 +1,14 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Delícias da Nilda</h1>
+    <p class="lead">Sistema de gestão e encomendas.</p>
+
+    <div class="d-flex justify-content-center gap-3 mt-4">
+        <a asp-page="/Cliente/Identificacao" class="btn btn-primary">Fazer um pedido</a>
+    </div>
+</div>

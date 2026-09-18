@@ -1,0 +1,36 @@
+@page
+@model DeliciasDaNilda.Pages.Cliente.IdentificacaoModel
+@{
+    ViewData["Title"] = "Identificação";
+    ViewData["Shell"] = "cliente";
+}
+
+<div class="dn-eyebrow mb-2">Identificação</div>
+<div class="dn-card-highlight p-4">
+    <h1 class="h4 mb-2">Seja bem-vinda(o)!</h1>
+    <p style="color:var(--ink-soft);font-size:14px;">
+        Pra fazer seu pedido, só precisamos do seu nome e do seu WhatsApp — sem senha, sem complicação.
+    </p>
+
+    <form method="post">
+        <div asp-validation-summary="All" class="text-danger"></div>
+
+        <div class="mb-3">
+            <label asp-for="Entrada.NomeCompleto" class="form-label"></label>
+            <input asp-for="Entrada.NomeCompleto" class="form-control" placeholder="Como podemos te chamar?" required />
+            <span asp-validation-for="Entrada.NomeCompleto" class="text-danger"></span>
+        </div>
+
+        <div class="mb-4">
+            <label asp-for="Entrada.WhatsApp" class="form-label"></label>
+            <input asp-for="Entrada.WhatsApp" class="form-control" placeholder="(00) 00000-0000" required />
+            <span asp-validation-for="Entrada.WhatsApp" class="text-danger"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100 btn-lg">Continuar</button>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
