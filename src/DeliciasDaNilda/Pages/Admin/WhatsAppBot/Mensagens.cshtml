@@ -1,0 +1,84 @@
+@page
+@using DeliciasDaNilda.Services
+@model DeliciasDaNilda.Pages.Admin.WhatsAppBot.MensagensModel
+@{
+    ViewData["Title"] = "Mensagens do atendimento automático";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">Mensagens do atendimento automático</h1>
+    <a asp-page="Index" class="btn btn-outline-secondary btn-sm">Voltar</a>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.Sucesso))
+{
+    <div class="alert alert-success">@Model.Sucesso</div>
+}
+@if (Model.Erro is not null)
+{
+    <div class="alert alert-danger">@Model.Erro</div>
+}
+
+<div class="dn-card p-3 mb-3" style="max-width:760px;">
+    <p class="mb-2">
+        Aqui você escolhe as palavras que o atendimento automático usa nas conversas. A ordem das
+        perguntas não muda; só o texto de cada mensagem.
+    </p>
+    <p class="mb-2">
+        Em algumas mensagens aparecem <strong>informações que o sistema preenche sozinho</strong>.
+        Elas ficam entre chaves e você deve mantê-las no texto:
+    </p>
+    <ul class="mb-2">
+        @foreach (var info in MensagensBotPadrao.InformacoesDisponiveis)
+        {
+            <li><code>{@info.Nome}</code> — @info.Descricao</li>
+        }
+    </ul>
+    <p class="mb-0">
+        Use <code>*texto*</code> para deixar em negrito no WhatsApp. Cada mensagem tem seu próprio botão de salvar.
+    </p>
+</div>
+
+@foreach (var m in Model.Mensagens)
+{
+    var d = m.Definicao;
+    var comErro = Model.ChaveComErro == d.Chave;
+    var textoCampo = comErro && Model.TextoDigitado is not null ? Model.TextoDigitado : m.Atual;
+    <div class="dn-card p-3 mb-3" id="@d.Chave" style="max-width:760px;">
+        <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+            <h2 class="h6 mb-0" style="color:var(--wine);font-family:'Playfair Display',serif;font-weight:700;">@d.Titulo</h2>
+            @if (m.Personalizada)
+            {
+                <span class="dn-badge dn-badge-concluido">Personalizada</span>
+            }
+            else
+            {
+                <span class="dn-badge dn-badge-cancelado">Texto original</span>
+            }
+        </div>
+        <p class="text-muted small mb-2">Enviada: @d.Quando</p>
+
+        <form method="post">
+            <input type="hidden" name="chave" value="@d.Chave" />
+            <textarea name="texto" class="form-control mb-2" rows="@Math.Clamp(textoCampo.Split('\n').Length + 1, 3, 10)" maxlength="@MensagensBotPadrao.TamanhoMaximoTexto">@textoCampo</textarea>
+            @if (d.Placeholders.Count > 0)
+            {
+                <div class="small text-muted mb-2">
+                    Informações que aparecem nesta mensagem:
+                    @string.Join(", ", d.Placeholders.Select(p => "{" + p + "}"))
+                </div>
+            }
+            <div class="d-flex gap-2 flex-wrap">
+                <button type="submit" class="btn btn-primary btn-sm" asp-page-handler="Salvar">Salvar</button>
+                @if (m.Personalizada)
+                {
+                    <button type="submit" class="btn btn-outline-secondary btn-sm" asp-page-handler="Restaurar">Restaurar texto original</button>
+                }
+            </div>
+        </form>
+
+        <div class="dn-resumo mt-3" style="white-space:pre-wrap;">
+            <div class="small text-muted mb-1">Como a cliente vê (com dados de exemplo):</div>@MensagensBotPadrao.PreencherComExemplos(m.Atual)
+        </div>
+    </div>
+}
