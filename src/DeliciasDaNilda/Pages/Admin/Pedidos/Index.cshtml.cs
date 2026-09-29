@@ -64,6 +64,7 @@ public class IndexModel : AdminPageModelBase
         var query = _db.Pedidos
             .Include(p => p.Cliente)
             .Include(p => p.Sabor)
+            .Include(p => p.Pagamentos)
             .AsQueryable();
 
         if (FiltroStatus is not null)
