@@ -1,0 +1,20 @@
+@model string
+@* Ícones de traço (24x24) usados na navegação e nos cards do painel. Cor e
+   espessura vêm do CSS (.dn-icone). *@
+@{
+    var caminho = Model switch
+    {
+        "hoje" => "M4 11l8-7 8 7M6 9.5V20h4v-5h4v5h4V9.5",
+        "pedidos" => "M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1zM7 6H6a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-1M9 13l2 2 4-4",
+        "agenda" => "M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM4 10h16M8 3v4M16 3v4",
+        "estoque" => "M4 8l8-4 8 4v8l-8 4-8-4V8zM4 8l8 4 8-4M12 12v8",
+        "cardapio" => "M4 20h16M6 20v-6a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6M12 13V9M12 9c-1 0-1.5-1-1.5-1.8S12 5 12 5s1.5 1.4 1.5 2.2S13 9 12 9z",
+        "financeiro" => "M4 20V10M10 20V4M16 20v-7M22 20H2",
+        "whatsapp" => "M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-5 4v-4H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z",
+        "alerta" => "M12 4l9 16H3L12 4zM12 10v4M12 17v.5",
+        "pagamento" => "M4 7h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1zM3 11h18M7 15h3",
+        "sair" => "M15 4h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3M10 8l-4 4 4 4M6 12h10",
+        _ => "M12 12h.01"
+    };
+}
+<svg class="dn-icone" viewBox="0 0 24 24" aria-hidden="true"><path d="@caminho" /></svg>

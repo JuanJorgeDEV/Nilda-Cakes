@@ -40,6 +40,9 @@ public class IndexModel : AdminPageModelBase
 
     public bool BotAtivo { get; private set; }
 
+    /// <summary>Próximas entregas ativas a partir de hoje (RN16).</summary>
+    public List<Domain.Entities.Pedido> ProximasEntregas { get; private set; } = new();
+
     public async Task OnGetAsync(CancellationToken ct)
     {
         var hoje = DateOnly.FromDateTime(DateTime.Today);
@@ -59,6 +62,16 @@ public class IndexModel : AdminPageModelBase
         IngredienteEmFalta = projecao.EstoqueSuficiente ? null : projecao.Alerta?.IngredienteNome;
 
         BotAtivo = await _configuracao.BotAtivoAsync(ct);
+
+        ProximasEntregas = await _db.Pedidos
+            .Include(p => p.Cliente)
+            .Include(p => p.Sabor)
+            .Where(p => p.DataEntrega >= hoje
+                        && (p.StatusPedido == StatusPedido.PendenteConfirmacao || p.StatusPedido == StatusPedido.Confirmado))
+            .OrderBy(p => p.DataEntrega)
+            .ThenBy(p => p.HorarioRetirada)
+            .Take(4)
+            .ToListAsync(ct);
     }
 
     public async Task<IActionResult> OnPostLogoutAsync()

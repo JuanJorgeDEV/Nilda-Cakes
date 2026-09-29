@@ -1,41 +1,31 @@
 @page
+@using DeliciasDaNilda.Domain.Enums
 @model DeliciasDaNilda.Pages.Admin.IndexModel
 @{
-    ViewData["Title"] = "Painel ADM";
+    ViewData["Title"] = "Hoje";
     string Plural(int n, string singular, string plural) => n == 1 ? $"1 {singular}" : $"{n} {plural}";
+    var hoje = DateOnly.FromDateTime(DateTime.Today);
+    var cultura = new System.Globalization.CultureInfo("pt-BR");
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h4 mb-0">Como está a loja hoje?</h1>
-    <form method="post" asp-page-handler="Logout">
-        <button type="submit" class="btn btn-outline-secondary btn-sm">Sair (@Model.AdministradorNome)</button>
-    </form>
-</div>
+<h1 class="h4 mb-3">Como está a loja hoje?</h1>
 
-<div class="dn-panel-grid">
+<div class="dn-panel-grid mb-4">
     <a asp-page="/Admin/Pedidos/Index" class="dn-panel-card">
-        <div class="dn-panel-card-icon" style="background:var(--rose-light);">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1zM7 6H6a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-1M9 13l2 2 4-4"/></svg>
-        </div>
+        <div class="dn-panel-card-icon" style="background:var(--rose-light);"><partial name="_Icone" model="@("pedidos")" /></div>
         <div class="dn-panel-card-title">Pedidos</div>
         <div class="dn-panel-card-stat @(Model.PedidosPendentes > 0 ? "dn-stat-warn" : "")">
             @(Model.PedidosPendentes > 0 ? $"{Model.PedidosPendentes} aguardando confirmação" : "Nada pendente")
         </div>
-        <div class="dn-panel-card-sub">Confirmação e cancelamento</div>
     </a>
     <a asp-page="/Admin/Agenda/Index" class="dn-panel-card">
-        <div class="dn-panel-card-icon" style="background:var(--rose-light);">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM4 10h16M8 3v4M16 3v4"/></svg>
-        </div>
-        <div class="dn-panel-card-title">Agenda do dia</div>
-        <div class="dn-panel-card-stat">@(Model.PedidosHoje == 0 ? "Sem entregas hoje" : Plural(Model.PedidosHoje, "entrega hoje", "entregas hoje"))</div>
-        <div class="dn-panel-card-sub">Pedidos e ficha técnica total</div>
+        <div class="dn-panel-card-icon" style="background:var(--rose-light);"><partial name="_Icone" model="@("agenda")" /></div>
+        <div class="dn-panel-card-title">Entregas hoje</div>
+        <div class="dn-panel-card-stat">@(Model.PedidosHoje == 0 ? "Nenhuma" : Plural(Model.PedidosHoje, "entrega", "entregas"))</div>
     </a>
     <a asp-page="/Admin/Estoque/Alertas" class="dn-panel-card">
-        <div class="dn-panel-card-icon" style="background:#FCEAE8;">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4l9 16H3L12 4zM12 10v4M12 17v.5"/></svg>
-        </div>
-        <div class="dn-panel-card-title">Alerta de reposição</div>
+        <div class="dn-panel-card-icon" style="background:var(--danger-bg);"><partial name="_Icone" model="@("alerta")" /></div>
+        <div class="dn-panel-card-title">Estoque</div>
         @if (Model.IngredienteEmFalta is not null)
         {
             <div class="dn-panel-card-stat dn-stat-danger">Vai faltar: @Model.IngredienteEmFalta</div>
@@ -44,38 +34,49 @@
         {
             <div class="dn-panel-card-stat dn-stat-ok">Estoque em dia</div>
         }
-        <div class="dn-panel-card-sub">Projeção de estoque</div>
     </a>
-    <a asp-page="/Admin/Pagamentos/Registrar" class="dn-panel-card">
-        <div class="dn-panel-card-icon" style="background:var(--gold-light);">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1zM3 11h18M7 15h3"/></svg>
-        </div>
-        <div class="dn-panel-card-title">Pagamentos</div>
-        <div class="dn-panel-card-stat">@(Model.ValorAReceber > 0 ? $"{Model.ValorAReceber:C} a receber" : "Tudo recebido")</div>
-        <div class="dn-panel-card-sub">Baixa financeira por pedido</div>
+    <a asp-page="/Admin/Financeiro/Index" class="dn-panel-card">
+        <div class="dn-panel-card-icon" style="background:var(--gold-light);"><partial name="_Icone" model="@("pagamento")" /></div>
+        <div class="dn-panel-card-title">A receber</div>
+        <div class="dn-panel-card-stat">@(Model.ValorAReceber > 0 ? Model.ValorAReceber.ToString("C") : "Tudo recebido")</div>
     </a>
-    <a asp-page="/Admin/Sabores/Cadastro" class="dn-panel-card">
-        <div class="dn-panel-card-icon" style="background:var(--gold-light);">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16M6 20v-6a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6M12 13V9M12 9c-1 0-1.5-1-1.5-1.8S12 5 12 5s1.5 1.4 1.5 2.2S13 9 12 9z"/></svg>
-        </div>
-        <div class="dn-panel-card-title">Sabores e ficha técnica</div>
-        <div class="dn-panel-card-stat">@Plural(Model.SaboresDisponiveis, "sabor disponível", "sabores disponíveis")</div>
-        <div class="dn-panel-card-sub">Ingredientes por kg</div>
-    </a>
-    <a asp-page="/Admin/Insumos/Index" class="dn-panel-card">
-        <div class="dn-panel-card-icon" style="background:var(--cream-2);">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8l8-4 8 4v8l-8 4-8-4V8zM4 8l8 4 8-4M12 12v8"/></svg>
-        </div>
-        <div class="dn-panel-card-title">Insumos</div>
-        <div class="dn-panel-card-stat">@Plural(Model.Ingredientes, "ingrediente", "ingredientes")</div>
-        <div class="dn-panel-card-sub">Entradas e perdas</div>
-    </a>
-    <a asp-page="/Admin/WhatsAppBot/Index" class="dn-panel-card">
-        <div class="dn-panel-card-icon" style="background:var(--cream-2);">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-5 4v-4H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>
-        </div>
-        <div class="dn-panel-card-title">Atendimento automático</div>
-        <div class="dn-panel-card-stat @(Model.BotAtivo ? "dn-stat-ok" : "")">@(Model.BotAtivo ? "Ligado" : "Desligado")</div>
-        <div class="dn-panel-card-sub">Pedidos pelo WhatsApp</div>
-    </a>
+</div>
+
+<div class="d-flex justify-content-between align-items-baseline mb-2">
+    <h2 class="h6 mb-0 dn-secao-titulo">Próximas entregas</h2>
+    <a asp-page="/Admin/Agenda/Index" class="small">ver agenda</a>
+</div>
+@if (Model.ProximasEntregas.Count == 0)
+{
+    <div class="dn-card p-3" style="color:var(--ink-soft);">Nenhuma entrega agendada.</div>
+}
+else
+{
+    <div class="d-flex flex-column gap-2 mb-4">
+        @foreach (var p in Model.ProximasEntregas)
+        {
+            var dias = p.DataEntrega.DayNumber - hoje.DayNumber;
+            var quando = dias switch { 0 => "HOJE", 1 => "amanhã", _ => $"em {dias} dias" };
+            var badge = DeliciasDaNilda.Pages.Shared.StatusBadgeHelper.Pedido(p.StatusPedido);
+            <a asp-page="/Admin/Pedidos/Index" asp-fragment="pedido-@p.Id" class="dn-entrega">
+                <span class="dn-data-bloco @(dias == 0 ? "hoje" : "")">
+                    <span class="dn-data-sem">@p.DataEntrega.ToString("ddd", cultura).TrimEnd('.')</span>
+                    <span class="dn-data-dia">@p.DataEntrega.Day</span>
+                    <span class="dn-data-mes">@p.DataEntrega.ToString("MMM", cultura).TrimEnd('.')</span>
+                </span>
+                <span class="dn-entrega-info">
+                    <span class="dn-entrega-quando @(dias == 0 ? "hoje" : "")">@quando@(p.HorarioRetirada is { } h ? $" · {h:HH\\:mm}" : "")</span>
+                    <span class="dn-pedido-cliente">@p.Cliente.NomeCompleto</span>
+                    <span class="dn-pedido-sub">@p.Sabor.Nome · @p.Peso.ToString("0.##") kg</span>
+                    <span class="dn-badge @badge.CssClass mt-1 align-self-start">● @badge.Label</span>
+                </span>
+            </a>
+        }
+    </div>
+}
+
+<div class="d-flex flex-wrap gap-2">
+    <a asp-page="/Admin/Sabores/Cadastro" class="dn-atalho"><partial name="_Icone" model="@("cardapio")" /> @Plural(Model.SaboresDisponiveis, "sabor disponível", "sabores disponíveis")</a>
+    <a asp-page="/Admin/Insumos/Index" class="dn-atalho"><partial name="_Icone" model="@("estoque")" /> @Plural(Model.Ingredientes, "ingrediente", "ingredientes")</a>
+    <a asp-page="/Admin/WhatsAppBot/Index" class="dn-atalho"><partial name="_Icone" model="@("whatsapp")" /> Bot @(Model.BotAtivo ? "ligado" : "desligado")</a>
 </div>

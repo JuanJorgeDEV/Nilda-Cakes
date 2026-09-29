@@ -28,13 +28,28 @@
         }
         else
         {
-            <div class="dn-admin-header mb-4">
+            var navAdmin = User.Identity?.IsAuthenticated == true
+                && (ViewContext.RouteData.Values["page"] as string ?? "").StartsWith("/Admin");
+            <div class="dn-admin-header @(navAdmin ? "mb-3" : "mb-4")">
                 <img src="~/images/logo.jpeg" alt="Delícias da Nilda" />
                 <div>
                     <div class="dn-wordmark" style="font-size:26px;">Delícias da Nilda</div>
                     <div style="font-size:12px;color:var(--ink-soft);">painel da loja</div>
                 </div>
+                @if (navAdmin)
+                {
+                    <form method="post" asp-page="/Admin/Index" asp-page-handler="Logout" class="ms-auto">
+                        <button type="submit" class="dn-sair" title="Sair">
+                            <partial name="_Icone" model="@("sair")" />
+                            <span>Sair</span>
+                        </button>
+                    </form>
+                }
             </div>
+            @if (navAdmin)
+            {
+                <partial name="_AdminNav" />
+            }
         }
     </header>
     <div class="@(isCliente ? "dn-cliente-shell" : "dn-admin-shell")" style="padding-top:0;">

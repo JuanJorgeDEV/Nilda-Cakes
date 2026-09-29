@@ -1,0 +1,26 @@
+@* Navegação principal do painel ADM: abas no topo (desktop) e barra fixa no
+   rodapé (celular). A aba ativa é deduzida pela pasta da página atual. *@
+@{
+    var pagina = ViewContext.RouteData.Values["page"] as string ?? "";
+    var abas = new (string Id, string Rotulo, string Pagina, string Prefixo, string Curto)[]
+    {
+        ("hoje", "Hoje", "/Admin/Index", "/Admin/Index", "Hoje"),
+        ("pedidos", "Pedidos", "/Admin/Pedidos/Index", "/Admin/Pedidos", "Pedidos"),
+        ("agenda", "Agenda", "/Admin/Agenda/Index", "/Admin/Agenda", "Agenda"),
+        ("estoque", "Estoque", "/Admin/Insumos/Index", "/Admin/Insumos|/Admin/Estoque", "Estoque"),
+        ("cardapio", "Cardápio", "/Admin/Sabores/Cadastro", "/Admin/Sabores", "Cardápio"),
+        ("financeiro", "Financeiro", "/Admin/Financeiro/Index", "/Admin/Financeiro", "Caixa"),
+        ("whatsapp", "WhatsApp", "/Admin/WhatsAppBot/Index", "/Admin/WhatsAppBot", "Bot"),
+    };
+    bool Ativa(string prefixos) => prefixos.Split('|').Any(p => pagina.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+}
+<nav class="dn-nav" aria-label="Seções do painel">
+    @foreach (var aba in abas)
+    {
+        var ativa = Ativa(aba.Prefixo);
+        <a asp-page="@aba.Pagina" class="dn-nav-item @(ativa ? "ativa" : "")" aria-current="@(ativa ? "page" : null)">
+            <partial name="_Icone" model="aba.Id" />
+            <span class="dn-nav-longo">@aba.Rotulo</span><span class="dn-nav-curto">@aba.Curto</span>
+        </a>
+    }
+</nav>
