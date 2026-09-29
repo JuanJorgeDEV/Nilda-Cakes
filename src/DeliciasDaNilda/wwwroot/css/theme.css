@@ -603,13 +603,19 @@ h1, h2, h3, .dn-title {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 130px auto;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .dn-ficha-remover { white-space: nowrap; }
 
 @media (max-width: 520px) {
-  .dn-ficha-linha { grid-template-columns: minmax(0, 1fr) auto; }
+  .dn-ficha-linha {
+    grid-template-columns: minmax(0, 1fr) auto;
+    margin-bottom: 18px;
+    padding-bottom: 18px;
+    border-bottom: 1px dashed var(--cream-2);
+  }
+  .dn-ficha-linha:last-child { border-bottom: 0; }
   .dn-ficha-ingrediente { grid-column: 1 / -1; }
 }
 
