@@ -36,19 +36,25 @@ public class RegistrarModel : AdminPageModelBase
 
     public class EntradaModel
     {
-        [Required(ErrorMessage = "Selecione o pedido.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Selecione o pedido.")]
         public int PedidoId { get; set; }
 
-        [Required(ErrorMessage = "Selecione o tipo de pagamento.")]
-        public TipoPagamento Tipo { get; set; }
+        /// <summary>Só é escolhido quando o pedido ainda não tem pagamento (Sinal ou Integral).</summary>
+        public TipoPagamento? Tipo { get; set; }
 
-        [Required(ErrorMessage = "Informe o valor.")]
-        [Range(0.01, 1000000, ErrorMessage = "Valor deve ser maior que zero.")]
-        public decimal Valor { get; set; }
+        /// <summary>Só é digitado quando o tipo é Sinal; nos demais o valor é o restante do pedido.</summary>
+        public decimal? Valor { get; set; }
 
         [Display(Name = "Forma de pagamento (opcional)")]
         public string? FormaPagamento { get; set; }
     }
+
+    public decimal JaPago => PedidoSelecionado?.Pagamentos.Sum(p => p.Valor) ?? 0m;
+
+    public decimal Restante => (PedidoSelecionado?.ValorTotal ?? 0m) - JaPago;
+
+    /// <summary>Com pagamento anterior (sinal), o único passo possível é acertar o saldo.</summary>
+    public bool ApenasSaldo => JaPago > 0;
 
     public async Task OnGetAsync(CancellationToken ct)
     {
@@ -58,18 +64,41 @@ public class RegistrarModel : AdminPageModelBase
 
     public async Task<IActionResult> OnPostAsync(CancellationToken ct)
     {
-        if (!ModelState.IsValid)
+        PedidoId = Entrada.PedidoId;
+        await CarregarDadosDeApoioAsync(ct);
+
+        if (!ModelState.IsValid || PedidoSelecionado is null)
         {
-            PedidoId = Entrada.PedidoId;
-            await CarregarDadosDeApoioAsync(ct);
             return Page();
         }
 
-        // RN09/RN10: baixa financeira registrada pelo ADM logado.
-        var resultado = await _pagamentoService.RegistrarPagamentoAsync(
-            Entrada.PedidoId, Entrada.Tipo, Entrada.Valor, AdministradorId, Entrada.FormaPagamento, ct);
+        // RN09/RN10: tipo e valor são deduzidos do estado do pedido; só o
+        // sinal tem valor digitado. O serviço ainda valida o teto do total.
+        TipoPagamento tipo;
+        decimal valor;
+        if (ApenasSaldo)
+        {
+            tipo = TipoPagamento.SaldoRestante;
+            valor = Restante;
+        }
+        else if (Entrada.Tipo == TipoPagamento.Sinal)
+        {
+            tipo = TipoPagamento.Sinal;
+            valor = Entrada.Valor ?? 0m;
+            if (valor <= 0 || valor >= Restante)
+            {
+                MensagemErro = $"O sinal deve ser maior que zero e menor que o total ({Restante:C}). Para pagar tudo, use pagamento integral.";
+                return Page();
+            }
+        }
+        else
+        {
+            tipo = TipoPagamento.Integral;
+            valor = Restante;
+        }
 
-        PedidoId = Entrada.PedidoId;
+        var resultado = await _pagamentoService.RegistrarPagamentoAsync(
+            Entrada.PedidoId, tipo, valor, AdministradorId, Entrada.FormaPagamento, ct);
 
         if (!resultado.Sucesso)
         {
