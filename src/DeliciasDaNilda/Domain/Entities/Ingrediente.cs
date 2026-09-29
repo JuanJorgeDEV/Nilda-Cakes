@@ -1,3 +1,5 @@
+using DeliciasDaNilda.Domain.Enums;
+
 namespace DeliciasDaNilda.Domain.Entities;
 
 /// <summary>
@@ -22,6 +24,15 @@ public class Ingrediente
 
     /// <summary>Limiar opcional de alerta preventivo (RN15).</summary>
     public decimal? EstoqueMinimoAlerta { get; set; }
+
+    /// <summary>Agrupamento só para organizar a tela de estoque.</summary>
+    public CategoriaIngrediente Categoria { get; set; } = CategoriaIngrediente.Outros;
+
+    /// <summary>
+    /// Custo opcional por unidade de medida (R$/kg, R$/L, R$/un). Base do
+    /// custo estimado dos sabores e do painel financeiro.
+    /// </summary>
+    public decimal? CustoPorUnidade { get; set; }
 
     public DateTime CriadoEm { get; set; }
 

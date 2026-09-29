@@ -109,7 +109,7 @@ public class NovoPedidoModel : PageModel
     private async Task CarregarDadosDeApoioAsync(CancellationToken ct)
     {
         SaboresDisponiveis = await _db.Sabores
-            .Where(s => s.Disponivel)
+            .Where(s => s.Disponivel && s.ExcluidoEm == null)
             .OrderBy(s => s.Nome)
             .ToListAsync(ct);
 

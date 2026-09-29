@@ -49,7 +49,7 @@ public class IndexModel : AdminPageModelBase
 
         PedidosPendentes = await _db.Pedidos.CountAsync(p => p.StatusPedido == StatusPedido.PendenteConfirmacao, ct);
         PedidosHoje = await _db.Pedidos.CountAsync(p => p.DataEntrega == hoje && p.StatusPedido != StatusPedido.Cancelado, ct);
-        SaboresDisponiveis = await _db.Sabores.CountAsync(s => s.Disponivel, ct);
+        SaboresDisponiveis = await _db.Sabores.CountAsync(s => s.Disponivel && s.ExcluidoEm == null, ct);
         Ingredientes = await _db.Ingredientes.CountAsync(ct);
 
         var emAberto = await _db.Pedidos

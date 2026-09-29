@@ -554,7 +554,7 @@ h1, h2, h3, .dn-title {
 
 .dn-ficha-linha {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 130px auto;
+  grid-template-columns: minmax(0, 1fr) 170px auto;
   gap: 8px;
   margin-bottom: 16px;
 }
@@ -988,3 +988,82 @@ h1, h2, h3, .dn-title {
   .dn-faixa-dia.selecionado .dn-faixa-pontos i { background: #fff; }
   .dn-ficha-dia li span:nth-child(n+2) { min-width: 70px; }
 }
+
+/* Cardápio (sabores) --------------------------------------------------------*/
+
+.dn-sabores {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.dn-sabor {
+  background: #fff;
+  border: 1px solid var(--cream-2);
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.dn-sabor.pausado .dn-sabor-foto { filter: grayscale(.7); opacity: .75; }
+
+.dn-sabor-foto {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  background: linear-gradient(135deg, var(--rose-light), var(--cream-2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dn-sabor-foto img { width: 100%; height: 100%; object-fit: cover; }
+.dn-sabor-foto .dn-badge { position: absolute; top: 10px; left: 10px; }
+.dn-sabor-foto.sem-foto { aspect-ratio: auto; height: 84px; }
+.dn-sabor-inicial { font-family: 'Yellowtail', cursive; font-size: 48px; color: var(--wine); opacity: .45; }
+
+.dn-sabor-corpo { padding: 14px 16px 12px; display: flex; flex-direction: column; flex: 1; }
+.dn-sabor-nome { font-size: 16px; font-weight: 600; margin: 0 0 2px; }
+.dn-sabor-desc { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 8px; }
+
+.dn-sabor-numeros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0 4px; }
+.dn-sabor-numeros dt { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-soft); font-weight: 500; }
+.dn-sabor-numeros dd { margin: 0; font-weight: 600; font-size: 15px; }
+.dn-sabor-numeros small { font-weight: 400; color: var(--ink-soft); font-size: 11px; }
+.dn-sabor-nota { font-size: 11.5px; color: var(--ink-soft); margin: 0 0 4px; }
+
+.dn-sabor-ficha { margin: 6px 0 10px; }
+.dn-sabor-ficha summary { font-size: 13px; color: var(--wine); cursor: pointer; }
+.dn-sabor-acoes { display: flex; gap: 6px; align-items: center; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--cream-2); }
+
+.dn-sabor-form { max-width: 720px; display: flex; flex-direction: column; gap: 14px; }
+.dn-foto-campo { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 16px; }
+.dn-foto-preview {
+  width: 112px;
+  height: 84px;
+  flex: none;
+  border-radius: 12px;
+  border: 2px dashed var(--rose);
+  background: var(--cream) center / cover no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--wine);
+  font-size: 12px;
+  text-align: center;
+  cursor: pointer;
+}
+.dn-ficha-qtd .form-select { max-width: 76px; flex: none; }
+
+.dn-custo-resumo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  background: var(--cream);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 13.5px;
+}
+.dn-custo-resumo div { display: flex; gap: 8px; align-items: baseline; }
+.dn-custo-resumo span { color: var(--ink-soft); }
+.dn-custo-resumo p { flex-basis: 100%; font-size: 12px; color: var(--warn); }
+
+.validation-summary-valid { display: none; }

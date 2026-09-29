@@ -187,10 +187,19 @@ namespace DeliciasDaNilda.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("Categoria")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(99);
+
                     b.Property<DateTime>("CriadoEm")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<decimal?>("CustoPorUnidade")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<decimal?>("EstoqueMinimoAlerta")
                         .HasPrecision(12, 4)
@@ -444,10 +453,25 @@ namespace DeliciasDaNilda.Migrations
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("GETUTCDATE()");
 
+                    b.Property<decimal?>("CustoExtraPorKg")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("Descricao")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
                     b.Property<bool>("Disponivel")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
+
+                    b.Property<DateTime?>("ExcluidoEm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ImagemUrl")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<string>("Nome")
                         .IsRequired()
@@ -462,7 +486,8 @@ namespace DeliciasDaNilda.Migrations
 
                     b.HasIndex("Nome")
                         .IsUnique()
-                        .HasDatabaseName("UX_Sabores_Nome");
+                        .HasDatabaseName("UX_Sabores_Nome")
+                        .HasFilter("[ExcluidoEm] IS NULL");
 
                     b.ToTable("Sabores", (string)null);
                 });

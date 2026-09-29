@@ -1,0 +1,226 @@
+@page
+@using System.Globalization
+@model DeliciasDaNilda.Pages.Admin.Sabores.EditarModel
+@{
+    var novo = Model.Id is null;
+    ViewData["Title"] = novo ? "Novo sabor" : "Editar sabor";
+    var inv = CultureInfo.InvariantCulture;
+    string OpcoesUnidade(string? unidadeBase) => (unidadeBase ?? "").ToLowerInvariant() switch
+    {
+        "kg" => "g,kg",
+        "l" => "ml,L",
+        _ => unidadeBase ?? "un"
+    };
+}
+
+<div class="d-flex align-items-center gap-2 mb-3">
+    <a asp-page="/Admin/Sabores/Cadastro" class="dn-seta" aria-label="Voltar ao cardápio">‹</a>
+    <h1 class="h4 mb-0">@(novo ? "Novo sabor" : Model.Entrada.Nome)</h1>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="dn-sabor-form" id="form-sabor">
+    <div asp-validation-summary="All" class="text-danger mb-2"></div>
+
+    <div class="dn-card p-3">
+        <div class="dn-foto-campo">
+            <label class="dn-foto-preview" for="Foto" id="foto-preview" style="@(Model.ImagemAtual is null ? "" : $"background-image:url('{Model.ImagemAtual}')")">
+                <span @(Model.ImagemAtual is null ? "" : "hidden")>+ foto do bolo</span>
+            </label>
+            <div class="flex-grow-1">
+                <label asp-for="Foto" class="form-label">Foto</label>
+                <input asp-for="Foto" type="file" accept="image/jpeg,image/png,image/webp" class="form-control form-control-sm" />
+                <div class="form-text">JPG, PNG ou WEBP até 3 MB. Aparece para o cliente na hora de escolher o bolo.</div>
+                @if (Model.ImagemAtual is not null)
+                {
+                    <div class="form-check mt-1">
+                        <input asp-for="RemoverFoto" class="form-check-input" />
+                        <label asp-for="RemoverFoto" class="form-check-label">Remover foto atual</label>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Entrada.Nome" class="form-label"></label>
+            <input asp-for="Entrada.Nome" class="form-control" placeholder="Ex: Sensação com brigadeiro" required />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Entrada.Descricao" class="form-label"></label>
+            <textarea asp-for="Entrada.Descricao" class="form-control" rows="2" maxlength="300" placeholder="Ex: Massa de chocolate, recheio de brigadeiro com morangos frescos"></textarea>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-6">
+                <label asp-for="Entrada.PrecoPorKg" class="form-label"></label>
+                <input asp-for="Entrada.PrecoPorKg" type="number" step="0.01" min="0.01" class="form-control" required />
+            </div>
+            <div class="col-6">
+                <label asp-for="Entrada.CustoExtraPorKg" class="form-label"></label>
+                <input asp-for="Entrada.CustoExtraPorKg" type="number" step="0.01" min="0" class="form-control" placeholder="embalagem, gás..." />
+            </div>
+        </div>
+
+        <div class="form-check form-switch mt-3">
+            <input asp-for="Entrada.Disponivel" class="form-check-input" role="switch" />
+            <label asp-for="Entrada.Disponivel" class="form-check-label"></label>
+        </div>
+    </div>
+
+    <div class="dn-card p-3">
+        <div class="d-flex justify-content-between align-items-baseline mb-2">
+            <h2 class="h6 mb-0 dn-secao-titulo">Ficha técnica</h2>
+            <span class="small" style="color:var(--ink-soft);">quanto vai em <strong>1 kg</strong> de bolo</span>
+        </div>
+
+        @if (Model.Ingredientes.Count == 0)
+        {
+            <div class="alert alert-warning">
+                Nenhum ingrediente cadastrado ainda. Cadastre em <a asp-page="/Admin/Insumos/Index">Estoque</a> antes de montar a ficha.
+            </div>
+        }
+
+        <div id="itens-ficha">
+            @for (var i = 0; i < Model.Entrada.Itens.Count; i++)
+            {
+                var item = Model.Entrada.Itens[i];
+                var ingSel = Model.Ingredientes.FirstOrDefault(x => x.Id == item.IngredienteId);
+                <div class="dn-ficha-linha linha-item-ficha">
+                    <select name="Entrada.Itens[@i].IngredienteId" class="form-select dn-ficha-ingrediente" aria-label="Ingrediente">
+                        <option value="0" data-unidade="">Selecione o ingrediente</option>
+                        @foreach (var ing in Model.Ingredientes)
+                        {
+                            <option value="@ing.Id" data-unidade="@ing.UnidadeMedida" data-custo="@(ing.CustoPorUnidade?.ToString(inv) ?? "")" selected="@(ing.Id == item.IngredienteId)">@ing.Nome</option>
+                        }
+                    </select>
+                    <div class="input-group dn-ficha-qtd">
+                        <input name="Entrada.Itens[@i].Quantidade" type="number" step="any" min="0" value="@(item.Quantidade?.ToString("0.###", inv))" class="form-control" placeholder="Qtd." aria-label="Quantidade" />
+                        <select name="Entrada.Itens[@i].Unidade" class="form-select dn-ficha-unidade" aria-label="Unidade" data-atual="@item.Unidade">
+                            @foreach (var u in OpcoesUnidade(ingSel?.UnidadeMedida).Split(','))
+                            {
+                                <option value="@u" selected="@(u == item.Unidade)">@u</option>
+                            }
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-outline-danger dn-ficha-remover btn-remover-linha" aria-label="Remover ingrediente">✕</button>
+                </div>
+            }
+        </div>
+        <button type="button" id="btn-adicionar-linha" class="dn-chip mt-1">+ adicionar ingrediente</button>
+
+        <div class="dn-custo-resumo mt-3" id="custo-resumo">
+            <div><span>Custo estimado</span><strong id="custo-kg">—</strong></div>
+            <div><span>Margem</span><strong id="custo-margem">—</strong></div>
+            <p id="custo-aviso" class="mb-0" hidden>Algum ingrediente está sem custo cadastrado — o valor está incompleto.</p>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <a asp-page="/Admin/Sabores/Cadastro" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary flex-grow-1">@(novo ? "Cadastrar sabor" : "Salvar alterações")</button>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var container = document.getElementById('itens-ficha');
+            var form = document.getElementById('form-sabor');
+            var moeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
+            function unidades(base) {
+                switch ((base || '').toLowerCase()) {
+                    case 'kg': return ['g', 'kg'];
+                    case 'l': return ['ml', 'L'];
+                    case '': return ['un'];
+                    default: return [base];
+                }
+            }
+
+            function paraBase(valor, de, base) {
+                de = (de || '').toLowerCase(); base = (base || '').toLowerCase();
+                if ((de === 'g' && base === 'kg') || (de === 'ml' && base === 'l')) return valor / 1000;
+                return valor;
+            }
+
+            function atualizarUnidade(linha) {
+                var opt = linha.querySelector('.dn-ficha-ingrediente').selectedOptions[0];
+                var sel = linha.querySelector('.dn-ficha-unidade');
+                var atual = sel.value;
+                var lista = unidades(opt ? opt.dataset.unidade : '');
+                sel.innerHTML = lista.map(function (u) { return '<option value="' + u + '">' + u + '</option>'; }).join('');
+                sel.value = lista.indexOf(atual) >= 0 ? atual : lista[0];
+            }
+
+            function recalcular() {
+                var total = 0, incompleto = false, algum = false;
+                container.querySelectorAll('.linha-item-ficha').forEach(function (linha) {
+                    var opt = linha.querySelector('.dn-ficha-ingrediente').selectedOptions[0];
+                    var qtd = parseFloat(linha.querySelector('input[type=number]').value);
+                    if (!opt || opt.value === '0' || !(qtd > 0)) return;
+                    algum = true;
+                    if (opt.dataset.custo === '') { incompleto = true; return; }
+                    var base = paraBase(qtd, linha.querySelector('.dn-ficha-unidade').value, opt.dataset.unidade);
+                    total += base * parseFloat(opt.dataset.custo);
+                });
+                var extra = parseFloat(form.querySelector('[name="Entrada.CustoExtraPorKg"]').value) || 0;
+                var preco = parseFloat(form.querySelector('[name="Entrada.PrecoPorKg"]').value) || 0;
+                total += extra;
+                document.getElementById('custo-kg').textContent = total > 0 ? moeda.format(total) + '/kg' : '—';
+                document.getElementById('custo-margem').textContent = preco > 0 && total > 0 ? Math.round((preco - total) / preco * 100) + '%' : '—';
+                document.getElementById('custo-aviso').hidden = !incompleto;
+            }
+
+            function reindexar() {
+                container.querySelectorAll('.linha-item-ficha').forEach(function (linha, index) {
+                    linha.querySelectorAll('select, input').forEach(function (campo) {
+                        campo.name = campo.name.replace(/Entrada\.Itens\[\d+\]/, 'Entrada.Itens[' + index + ']');
+                    });
+                });
+            }
+
+            document.getElementById('btn-adicionar-linha').addEventListener('click', function () {
+                var nova = container.querySelector('.linha-item-ficha').cloneNode(true);
+                nova.querySelector('.dn-ficha-ingrediente').selectedIndex = 0;
+                nova.querySelector('input[type=number]').value = '';
+                container.appendChild(nova);
+                atualizarUnidade(nova);
+                reindexar();
+                nova.querySelector('.dn-ficha-ingrediente').focus();
+            });
+
+            container.addEventListener('click', function (e) {
+                var btn = e.target.closest('.btn-remover-linha');
+                if (!btn) return;
+                var linhas = container.querySelectorAll('.linha-item-ficha');
+                var linha = btn.closest('.linha-item-ficha');
+                if (linhas.length > 1) {
+                    linha.remove();
+                    reindexar();
+                } else {
+                    linha.querySelector('.dn-ficha-ingrediente').selectedIndex = 0;
+                    linha.querySelector('input[type=number]').value = '';
+                }
+                recalcular();
+            });
+
+            container.addEventListener('change', function (e) {
+                if (e.target.classList.contains('dn-ficha-ingrediente')) atualizarUnidade(e.target.closest('.linha-item-ficha'));
+                recalcular();
+            });
+            form.addEventListener('input', recalcular);
+
+            var inputFoto = document.getElementById('Foto');
+            inputFoto.addEventListener('change', function () {
+                var arquivo = inputFoto.files[0];
+                if (!arquivo) return;
+                var preview = document.getElementById('foto-preview');
+                preview.style.backgroundImage = 'url(' + URL.createObjectURL(arquivo) + ')';
+                preview.querySelector('span').hidden = true;
+            });
+
+            recalcular();
+        })();
+    </script>
+}

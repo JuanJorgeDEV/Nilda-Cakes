@@ -29,8 +29,20 @@ public class SaborConfiguration : IEntityTypeConfiguration<Sabor>
             .IsRequired()
             .HasDefaultValueSql("GETUTCDATE()");
 
+        builder.Property(s => s.Descricao)
+            .HasMaxLength(300);
+
+        builder.Property(s => s.ImagemUrl)
+            .HasMaxLength(300);
+
+        builder.Property(s => s.CustoExtraPorKg)
+            .HasPrecision(10, 2);
+
+        // Nome único só entre sabores não excluídos, para permitir recriar
+        // um sabor com o nome de um que foi excluído.
         builder.HasIndex(s => s.Nome)
             .IsUnique()
+            .HasFilter("[ExcluidoEm] IS NULL")
             .HasDatabaseName("UX_Sabores_Nome");
 
         // Sabor 1-N Pedido: nunca deletar em cascata (histórico de negócio).

@@ -88,7 +88,7 @@ public class PedidoService : IPedidoService
             return ResultadoOperacao<Pedido>.Falha("Cliente não encontrado.");
         }
 
-        var sabor = await _db.Sabores.FirstOrDefaultAsync(s => s.Id == saborId, ct);
+        var sabor = await _db.Sabores.FirstOrDefaultAsync(s => s.Id == saborId && s.ExcluidoEm == null, ct);
         if (sabor is null)
         {
             return ResultadoOperacao<Pedido>.Falha("Sabor não encontrado.");

@@ -37,6 +37,13 @@ public class IndexModel : AdminPageModelBase
 
     public DateOnly Hoje { get; } = DateOnly.FromDateTime(DateTime.Today);
 
+    /// <summary>Resultado das ações do card (postadas em Pedidos, que volta para cá).</summary>
+    [TempData]
+    public string? MensagemSucesso { get; set; }
+
+    [TempData]
+    public string? MensagemErro { get; set; }
+
     public DateOnly DiaSelecionado { get; private set; }
 
     /// <summary>Domingo da semana exibida.</summary>

@@ -37,6 +37,15 @@
     <span class="dn-semana-titulo">@tituloSemana</span>
 </div>
 
+@if (!string.IsNullOrWhiteSpace(Model.MensagemSucesso))
+{
+    <div class="alert alert-success py-2">@Model.MensagemSucesso</div>
+}
+@if (!string.IsNullOrWhiteSpace(Model.MensagemErro))
+{
+    <div class="alert alert-danger py-2">@Model.MensagemErro</div>
+}
+
 @* Grade semanal (desktop) *@
 <div class="dn-cal dn-card mb-4" style="--hora:@(alturaHora)px;">
     <div class="dn-cal-cabecalho">

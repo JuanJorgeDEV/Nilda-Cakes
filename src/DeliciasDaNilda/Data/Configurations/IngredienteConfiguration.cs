@@ -1,3 +1,4 @@
+using DeliciasDaNilda.Domain.Enums;
 using DeliciasDaNilda.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -32,6 +33,14 @@ public class IngredienteConfiguration : IEntityTypeConfiguration<Ingrediente>
 
         builder.Property(i => i.EstoqueMinimoAlerta)
             .HasPrecision(12, 4);
+
+        builder.Property(i => i.Categoria)
+            .IsRequired()
+            .HasDefaultValue(CategoriaIngrediente.Outros)
+            .HasSentinel((CategoriaIngrediente)0);
+
+        builder.Property(i => i.CustoPorUnidade)
+            .HasPrecision(10, 2);
 
         builder.Property(i => i.CriadoEm)
             .IsRequired()
