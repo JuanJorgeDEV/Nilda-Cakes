@@ -1,0 +1,199 @@
+@using DeliciasDaNilda.Domain.Enums
+@using DeliciasDaNilda.Services.Common
+@model PedidoCardModel
+@*
+    Card expansível de pedido (Pedidos e Agenda). Todas as ações postam para
+    /Admin/Pedidos, que volta para a URL em "voltar" (padrão PRG).
+    RN08 confirmar/cancelar · RN09/RN10 pagamento · RN15 falta de ingrediente.
+*@
+@{
+    var pedido = Model.Pedido;
+    var cultura = new System.Globalization.CultureInfo("pt-BR");
+    var badge = StatusBadgeHelper.Pedido(pedido.StatusPedido);
+    var badgePagamento = StatusBadgeHelper.Pagamento(pedido.StatusPagamento);
+    var pago = pedido.Pagamentos.Sum(x => x.Valor);
+    var restante = pedido.ValorTotal - pago;
+    var ativo = pedido.StatusPedido is StatusPedido.PendenteConfirmacao or StatusPedido.Confirmado;
+    var dias = pedido.DataEntrega.DayNumber - Model.Hoje.DayNumber;
+    var atrasado = ativo && dias < 0;
+    var quando = !ativo ? pedido.DataEntrega.ToString("dd/MM/yyyy")
+        : dias switch { < 0 => $"atrasado {-dias} {(dias == -1 ? "dia" : "dias")}", 0 => "HOJE", 1 => "amanhã", _ => $"em {dias} dias" };
+    var digitos = new string(pedido.Cliente.WhatsApp.Where(char.IsDigit).ToArray());
+    if (digitos.Length is 10 or 11) { digitos = "55" + digitos; }
+    var waLink = "https://wa.me/" + digitos;
+    var alvo = "pedido-" + pedido.Id;
+    var temFalta = Model.Faltas is { Count: > 0 };
+    var sinal50 = Math.Round(pedido.ValorTotal / 2m, 2);
+}
+<div class="dn-pedido @(pedido.StatusPedido == StatusPedido.Cancelado ? "cancelado" : "")" id="card-@alvo">
+    <button type="button" class="dn-pedido-head @(Model.Aberto ? "" : "collapsed")" data-bs-toggle="collapse" data-bs-target="#@alvo" aria-expanded="@(Model.Aberto ? "true" : "false")" aria-controls="@alvo">
+        <span class="dn-data-bloco @(dias == 0 && ativo ? "hoje" : "") @(atrasado ? "atrasado" : "")">
+            <span class="dn-data-sem">@pedido.DataEntrega.ToString("ddd", cultura).TrimEnd('.')</span>
+            <span class="dn-data-dia">@pedido.DataEntrega.Day</span>
+            <span class="dn-data-mes">@pedido.DataEntrega.ToString("MMM", cultura).TrimEnd('.')</span>
+        </span>
+        <span class="dn-pedido-main">
+            <span class="dn-entrega-quando @(dias == 0 && ativo ? "hoje" : "") @(atrasado ? "atrasado" : "")">
+                @quando@(pedido.HorarioRetirada is { } h ? $" · {h:HH\\:mm}" : "")
+            </span>
+            <span class="dn-pedido-cliente">@pedido.Cliente.NomeCompleto</span>
+            <span class="dn-pedido-sub">@pedido.Sabor.Nome · @QuantidadeFormatter.Formatar(pedido.Peso, "kg")</span>
+            <span class="dn-pedido-badges">
+                <span class="dn-badge @badge.CssClass">● @badge.Label</span>
+                @if (pedido.StatusPedido != StatusPedido.Cancelado)
+                {
+                    <span class="dn-badge @badgePagamento.CssClass">● @badgePagamento.Label</span>
+                }
+                @if (temFalta)
+                {
+                    <span class="dn-badge dn-badge-falta">⚠ Falta ingrediente</span>
+                }
+            </span>
+        </span>
+        <span class="dn-pedido-valor">@pedido.ValorTotal.ToString("C")</span>
+        <span class="dn-pedido-chevron" aria-hidden="true">▾</span>
+    </button>
+
+    <div id="@alvo" class="collapse @(Model.Aberto ? "show" : "")">
+        <div class="dn-pedido-body">
+            @if (temFalta)
+            {
+                <div class="dn-falta">
+                    <strong>Estoque não cobre este pedido:</strong>
+                    <ul>
+                        @foreach (var falta in Model.Faltas!)
+                        {
+                            <li>@falta.IngredienteNome — faltam <strong>@QuantidadeFormatter.Formatar(falta.QuantidadeFaltante, falta.UnidadeMedida)</strong></li>
+                        }
+                    </ul>
+                    <a asp-page="/Admin/Insumos/Index">Registrar entrada de insumos</a>
+                </div>
+            }
+
+            <dl class="dn-pedido-dl">
+                <div><dt>WhatsApp</dt><dd><a href="@waLink" target="_blank" rel="noopener">@pedido.Cliente.WhatsApp</a></dd></div>
+                <div><dt>Preço por kg</dt><dd>@pedido.PrecoPorKgUtilizado.ToString("C")</dd></div>
+                <div><dt>Pedido feito em</dt><dd>@pedido.CriadoEm.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd></div>
+                <div class="dn-dl-largo">
+                    <dt>Horário de retirada</dt>
+                    <dd>
+                        @if (ativo)
+                        {
+                            <form method="post" asp-page="/Admin/Pedidos/Index" asp-page-handler="Horario" asp-route-id="@pedido.Id" class="d-flex gap-1">
+                                <input type="hidden" name="voltar" value="@Model.Voltar" />
+                                <input type="time" name="horario" value="@pedido.HorarioRetirada?.ToString("HH:mm")" class="form-control form-control-sm" style="max-width:120px;" aria-label="Horário de retirada" />
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">Salvar</button>
+                            </form>
+                        }
+                        else
+                        {
+                            @(pedido.HorarioRetirada?.ToString("HH:mm") ?? "—")
+                        }
+                    </dd>
+                </div>
+            </dl>
+
+            @if (!string.IsNullOrWhiteSpace(pedido.Observacoes))
+            {
+                <p class="dn-pedido-obs"><strong>Observações:</strong> @pedido.Observacoes</p>
+            }
+
+            @if (pedido.StatusPedido != StatusPedido.Cancelado)
+            {
+                <div class="dn-pagamento">
+                    <div class="dn-pagamento-topo">
+                        <span class="dn-pagamento-titulo">Pagamento</span>
+                        @if (restante <= 0)
+                        {
+                            <span class="dn-stat-ok fw-semibold">✓ Pago @pedido.ValorTotal.ToString("C")</span>
+                        }
+                        else if (pago > 0)
+                        {
+                            <span>Pago @pago.ToString("C") · <strong>falta @restante.ToString("C")</strong></span>
+                        }
+                        else
+                        {
+                            <span>Nada recebido ainda</span>
+                        }
+                    </div>
+
+                    @if (restante > 0)
+                    {
+                        <form method="post" asp-page="/Admin/Pedidos/Index" asp-page-handler="Pagamento" asp-route-id="@pedido.Id">
+                            <input type="hidden" name="voltar" value="@Model.Voltar" />
+                            <div class="dn-chips mb-2" role="radiogroup" aria-label="Forma de pagamento">
+                                @foreach (var forma in new[] { "Pix", "Dinheiro", "Cartão" })
+                                {
+                                    var idForma = $"forma-{pedido.Id}-{forma}";
+                                    <input type="radio" class="btn-check" name="forma" id="@idForma" value="@forma" checked="@(forma == "Pix")" />
+                                    <label class="dn-chip" for="@idForma">@forma</label>
+                                }
+                            </div>
+                            <div class="d-flex gap-2 flex-wrap">
+                                @if (pago > 0)
+                                {
+                                    <button type="submit" name="modo" value="tudo" class="btn btn-primary btn-sm">Recebi o saldo · @restante.ToString("C")</button>
+                                }
+                                else
+                                {
+                                    <button type="submit" name="modo" value="tudo" class="btn btn-primary btn-sm">Recebi tudo · @pedido.ValorTotal.ToString("C")</button>
+                                    <button type="submit" name="modo" value="sinal50" class="btn btn-outline-primary btn-sm">Recebi sinal 50% · @sinal50.ToString("C")</button>
+                                    <button type="button" class="btn btn-link btn-sm px-1" data-bs-toggle="collapse" data-bs-target="#outro-@alvo">outro valor de sinal</button>
+                                }
+                            </div>
+                            @if (pago == 0)
+                            {
+                                <div class="collapse mt-2" id="outro-@alvo">
+                                    <div class="d-flex gap-2 align-items-center">
+                                        <div class="input-group input-group-sm" style="max-width:180px;">
+                                            <span class="input-group-text">R$</span>
+                                            <input type="number" name="valorSinal" step="0.01" min="0.01" max="@pedido.ValorTotal" class="form-control" aria-label="Valor do sinal" />
+                                        </div>
+                                        <button type="submit" name="modo" value="sinal" class="btn btn-outline-primary btn-sm">Registrar sinal</button>
+                                    </div>
+                                </div>
+                            }
+                        </form>
+                    }
+
+                    @if (pedido.Pagamentos.Count > 0)
+                    {
+                        <ul class="dn-historico">
+                            @foreach (var pg in pedido.Pagamentos.OrderBy(x => x.CriadoEm))
+                            {
+                                var tipo = pg.Tipo switch { TipoPagamento.Sinal => "Sinal", TipoPagamento.SaldoRestante => "Saldo", _ => "Integral" };
+                                <li><span>@pg.CriadoEm.ToLocalTime().ToString("dd/MM") · @tipo@(string.IsNullOrWhiteSpace(pg.FormaPagamento) ? "" : $" · {pg.FormaPagamento}")</span><strong>@pg.Valor.ToString("C")</strong></li>
+                            }
+                        </ul>
+                    }
+                </div>
+            }
+
+            <div class="d-flex gap-2 flex-wrap">
+                @if (pedido.StatusPedido == StatusPedido.PendenteConfirmacao)
+                {
+                    <form method="post" asp-page="/Admin/Pedidos/Index" asp-page-handler="Confirmar" asp-route-id="@pedido.Id">
+                        <input type="hidden" name="voltar" value="@Model.Voltar" />
+                        <button type="submit" class="btn btn-success btn-sm">Confirmar pedido</button>
+                    </form>
+                }
+                @if (pedido.StatusPedido == StatusPedido.Confirmado)
+                {
+                    <form method="post" asp-page="/Admin/Pedidos/Index" asp-page-handler="Concluir" asp-route-id="@pedido.Id">
+                        <input type="hidden" name="voltar" value="@Model.Voltar" />
+                        <button type="submit" class="btn btn-success btn-sm">Marcar como entregue</button>
+                    </form>
+                }
+                <a href="@waLink" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm">Chamar no WhatsApp</a>
+                @if (ativo)
+                {
+                    <form method="post" asp-page="/Admin/Pedidos/Index" asp-page-handler="Cancelar" asp-route-id="@pedido.Id" class="ms-auto"
+                          onsubmit="return confirm('Cancelar o pedido de @pedido.Cliente.NomeCompleto.Replace("'", "")?');">
+                        <input type="hidden" name="voltar" value="@Model.Voltar" />
+                        <button type="submit" class="btn btn-outline-danger btn-sm">Cancelar pedido</button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+</div>

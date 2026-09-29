@@ -58,7 +58,7 @@ else
             var dias = p.DataEntrega.DayNumber - hoje.DayNumber;
             var quando = dias switch { 0 => "HOJE", 1 => "amanhã", _ => $"em {dias} dias" };
             var badge = DeliciasDaNilda.Pages.Shared.StatusBadgeHelper.Pedido(p.StatusPedido);
-            <a asp-page="/Admin/Pedidos/Index" asp-fragment="pedido-@p.Id" class="dn-entrega">
+            <a asp-page="/Admin/Pedidos/Index" asp-route-aberto="@p.Id" class="dn-entrega">
                 <span class="dn-data-bloco @(dias == 0 ? "hoje" : "")">
                     <span class="dn-data-sem">@p.DataEntrega.ToString("ddd", cultura).TrimEnd('.')</span>
                     <span class="dn-data-dia">@p.DataEntrega.Day</span>

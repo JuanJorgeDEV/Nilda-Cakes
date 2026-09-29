@@ -93,4 +93,36 @@ public class ProjecaoEstoqueServiceTests
         Assert.Null(r.Alerta);
         Assert.Equal(ultimo.Id, r.UltimoPedidoCoberto!.PedidoId);
     }
+
+    [Fact]
+    public async Task PorPedido_ContinuaDepoisDaPrimeiraFalta_EInformaQuantoFaltaParaCadaUm()
+    {
+        await using var db = CriarContexto();
+        var (sabor, ing, cliente) = await SeedAsync(db, saldo: 1.5m);
+        // Demandas: 1 kg (dia 5), 1 kg (dia 10), 1 kg (dia 20).
+        var coberto = await PedidoAsync(db, sabor, cliente, 2m, 5, StatusPedido.PendenteConfirmacao);
+        var parcial = await PedidoAsync(db, sabor, cliente, 2m, 10, StatusPedido.PendenteConfirmacao);
+        var semNada = await PedidoAsync(db, sabor, cliente, 2m, 20, StatusPedido.PendenteConfirmacao);
+        await PedidoAsync(db, sabor, cliente, 2m, 6, StatusPedido.Confirmado); // já abatido, não entra
+
+        var faltas = await new ProjecaoEstoqueService(db).ProjetarPorPedidoAsync();
+
+        Assert.False(faltas.ContainsKey(coberto.Id));
+        Assert.Equal(0.5m, Assert.Single(faltas[parcial.Id]).QuantidadeFaltante); // 1,5 - 1 = 0,5 sobra; falta 0,5
+        var falta = Assert.Single(faltas[semNada.Id]);
+        Assert.Equal(1m, falta.QuantidadeFaltante); // saldo já zerado: falta a demanda inteira
+        Assert.Equal(ing.Id, falta.IngredienteId);
+    }
+
+    [Fact]
+    public async Task PorPedido_EstoqueSuficiente_DicionarioVazio()
+    {
+        await using var db = CriarContexto();
+        var (sabor, _, cliente) = await SeedAsync(db, saldo: 10m);
+        await PedidoAsync(db, sabor, cliente, 2m, 5, StatusPedido.PendenteConfirmacao);
+
+        var faltas = await new ProjecaoEstoqueService(db).ProjetarPorPedidoAsync();
+
+        Assert.Empty(faltas);
+    }
 }

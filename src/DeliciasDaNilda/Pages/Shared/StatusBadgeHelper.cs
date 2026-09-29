@@ -10,10 +10,10 @@ public static class StatusBadgeHelper
 {
     public static (string CssClass, string Label) Pedido(StatusPedido status) => status switch
     {
-        StatusPedido.PendenteConfirmacao => ("dn-badge-pendente", "Pendente de Confirmação"),
+        StatusPedido.PendenteConfirmacao => ("dn-badge-pendente", "A confirmar"),
         StatusPedido.Confirmado => ("dn-badge-confirmado", "Confirmado"),
         StatusPedido.Cancelado => ("dn-badge-cancelado", "Cancelado"),
-        StatusPedido.Concluido => ("dn-badge-concluido", "Concluído"),
+        StatusPedido.Concluido => ("dn-badge-concluido", "Entregue"),
         _ => ("dn-badge-cancelado", status.ToString())
     };
 
@@ -21,7 +21,7 @@ public static class StatusBadgeHelper
     {
         StatusPagamento.SemPagamento => ("dn-badge-pendente", "Sem pagamento"),
         StatusPagamento.SinalPago => ("dn-badge-confirmado", "Sinal pago"),
-        StatusPagamento.PagoIntegral => ("dn-badge-concluido", "Pago integral"),
+        StatusPagamento.PagoIntegral => ("dn-badge-concluido", "Pago"),
         _ => ("dn-badge-cancelado", status.ToString())
     };
 }

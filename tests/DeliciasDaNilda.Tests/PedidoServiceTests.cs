@@ -150,4 +150,37 @@ public class PedidoServiceTests
             .CountAsync(m => m.PedidoId == pedido.Id && m.Tipo == TipoMovimentoEstoque.AjusteCorrecao);
         Assert.Equal(1, totalEstornos);
     }
+
+    [Theory]
+    [InlineData(StatusPedido.PendenteConfirmacao, false)]
+    [InlineData(StatusPedido.Confirmado, true)]
+    [InlineData(StatusPedido.Cancelado, false)]
+    public async Task ConcluirPedido_SoAceitaConfirmado(StatusPedido statusInicial, bool deveConcluir)
+    {
+        await using var db = CriarContexto();
+        var (cliente, sabor, _) = await SeedBaseAsync(db);
+        var pedido = await SeedPedidoAsync(db, cliente, sabor, statusInicial);
+        var service = new PedidoService(db, new PrecificacaoService(), new AgendamentoService(db), new EstoqueService(db));
+
+        var resultado = await service.ConcluirPedidoAsync(pedido.Id);
+
+        Assert.Equal(deveConcluir, resultado.Sucesso);
+        var atualizado = await db.Pedidos.AsNoTracking().SingleAsync(p => p.Id == pedido.Id);
+        Assert.Equal(deveConcluir ? StatusPedido.Concluido : statusInicial, atualizado.StatusPedido);
+    }
+
+    [Fact]
+    public async Task DefinirHorario_PedidoAtivo_Grava_E_PodeLimpar()
+    {
+        await using var db = CriarContexto();
+        var (cliente, sabor, _) = await SeedBaseAsync(db);
+        var pedido = await SeedPedidoAsync(db, cliente, sabor, StatusPedido.Confirmado);
+        var service = new PedidoService(db, new PrecificacaoService(), new AgendamentoService(db), new EstoqueService(db));
+
+        Assert.True((await service.DefinirHorarioAsync(pedido.Id, new TimeOnly(15, 30))).Sucesso);
+        Assert.Equal(new TimeOnly(15, 30), (await db.Pedidos.AsNoTracking().SingleAsync(p => p.Id == pedido.Id)).HorarioRetirada);
+
+        Assert.True((await service.DefinirHorarioAsync(pedido.Id, null)).Sucesso);
+        Assert.Null((await db.Pedidos.AsNoTracking().SingleAsync(p => p.Id == pedido.Id)).HorarioRetirada);
+    }
 }

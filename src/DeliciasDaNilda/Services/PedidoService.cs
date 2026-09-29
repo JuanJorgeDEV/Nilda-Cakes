@@ -36,6 +36,15 @@ public interface IPedidoService
     /// muda o status. Se estava PendenteConfirmacao, só muda o status.
     /// </summary>
     Task<ResultadoOperacao> CancelarPedidoAsync(int pedidoId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Marca um pedido Confirmado como entregue (Concluido). O estoque já foi
+    /// abatido na confirmação (RN12), então aqui só muda o status.
+    /// </summary>
+    Task<ResultadoOperacao> ConcluirPedidoAsync(int pedidoId, CancellationToken ct = default);
+
+    /// <summary>Define o horário de retirada combinado com o cliente (RN08).</summary>
+    Task<ResultadoOperacao> DefinirHorarioAsync(int pedidoId, TimeOnly? horario, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -204,6 +213,47 @@ public class PedidoService : IPedidoService
 
         await _db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
+        return ResultadoOperacao.Ok();
+    }
+
+    public async Task<ResultadoOperacao> ConcluirPedidoAsync(int pedidoId, CancellationToken ct = default)
+    {
+        var pedido = await _db.Pedidos.FirstOrDefaultAsync(p => p.Id == pedidoId, ct);
+        if (pedido is null)
+        {
+            return ResultadoOperacao.Falha("Pedido não encontrado.");
+        }
+
+        if (pedido.StatusPedido == StatusPedido.Concluido)
+        {
+            return ResultadoOperacao.Ok();
+        }
+
+        if (pedido.StatusPedido != StatusPedido.Confirmado)
+        {
+            return ResultadoOperacao.Falha("Só um pedido confirmado pode ser marcado como entregue.");
+        }
+
+        pedido.StatusPedido = StatusPedido.Concluido;
+        await _db.SaveChangesAsync(ct);
+        return ResultadoOperacao.Ok();
+    }
+
+    public async Task<ResultadoOperacao> DefinirHorarioAsync(int pedidoId, TimeOnly? horario, CancellationToken ct = default)
+    {
+        var pedido = await _db.Pedidos.FirstOrDefaultAsync(p => p.Id == pedidoId, ct);
+        if (pedido is null)
+        {
+            return ResultadoOperacao.Falha("Pedido não encontrado.");
+        }
+
+        if (pedido.StatusPedido is StatusPedido.Cancelado or StatusPedido.Concluido)
+        {
+            return ResultadoOperacao.Falha("Pedido encerrado não pode ter o horário alterado.");
+        }
+
+        pedido.HorarioRetirada = horario;
+        await _db.SaveChangesAsync(ct);
         return ResultadoOperacao.Ok();
     }
 }

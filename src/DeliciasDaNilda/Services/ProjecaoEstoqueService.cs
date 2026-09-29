@@ -46,7 +46,18 @@ public interface IProjecaoEstoqueService
     /// precisa ser feita (RN15) — simples, sem persistência própria.
     /// </summary>
     Task<ProjecaoEstoqueResultado> ProjetarAsync(int diasAntecedenciaCompra = 3, CancellationToken ct = default);
+
+    /// <summary>
+    /// RN14/RN15 por pedido — mesma fila cronológica de <see cref="ProjetarAsync"/>,
+    /// mas sem parar na primeira falta: devolve, para cada pedido pendente que
+    /// não seria atendido, os ingredientes que faltam e quanto falta para ele.
+    /// Pedidos totalmente cobertos não aparecem no dicionário.
+    /// </summary>
+    Task<IReadOnlyDictionary<int, IReadOnlyList<FaltaIngrediente>>> ProjetarPorPedidoAsync(CancellationToken ct = default);
 }
+
+/// <summary>Ingrediente que falta para atender um pedido específico (RN15).</summary>
+public sealed record FaltaIngrediente(int IngredienteId, string IngredienteNome, string UnidadeMedida, decimal QuantidadeFaltante);
 
 /// <summary>
 /// Serviço de projeção/inteligência de estoque (RN14, RN15).
@@ -127,5 +138,58 @@ public class ProjecaoEstoqueService : IProjecaoEstoqueService
         }
 
         return new ProjecaoEstoqueResultado(true, null, ultimoCoberto);
+    }
+
+    public async Task<IReadOnlyDictionary<int, IReadOnlyList<FaltaIngrediente>>> ProjetarPorPedidoAsync(CancellationToken ct = default)
+    {
+        // RN14: mesma fila de ProjetarAsync — só pendentes; confirmados já foram abatidos (RN12).
+        var pedidosPendentes = await _db.Pedidos
+            .Where(p => p.StatusPedido == StatusPedido.PendenteConfirmacao)
+            .OrderBy(p => p.DataEntrega)
+            .ThenBy(p => p.Id)
+            .Include(p => p.Sabor)
+                .ThenInclude(s => s.FichaTecnica!)
+                    .ThenInclude(f => f.Itens)
+                        .ThenInclude(i => i.Ingrediente)
+            .ToListAsync(ct);
+
+        var saldosProjetados = await _db.Ingredientes
+            .ToDictionaryAsync(i => i.Id, i => i.SaldoAtual, ct);
+
+        var faltas = new Dictionary<int, IReadOnlyList<FaltaIngrediente>>();
+
+        foreach (var pedido in pedidosPendentes)
+        {
+            if (pedido.Sabor.FichaTecnica is null)
+            {
+                continue;
+            }
+
+            var faltasDoPedido = new List<FaltaIngrediente>();
+
+            foreach (var item in pedido.Sabor.FichaTecnica.Itens)
+            {
+                var demanda = item.QuantidadePorKg * pedido.Peso;
+                var saldoAntes = saldosProjetados.GetValueOrDefault(item.IngredienteId);
+                var saldoDepois = saldoAntes - demanda;
+                saldosProjetados[item.IngredienteId] = saldoDepois;
+
+                if (saldoDepois < 0)
+                {
+                    // RN15: o que falta para ESTE pedido é a parte da demanda
+                    // que o saldo restante (se ainda positivo) não cobre.
+                    var faltante = Math.Min(demanda, -saldoDepois);
+                    faltasDoPedido.Add(new FaltaIngrediente(
+                        item.IngredienteId, item.Ingrediente.Nome, item.Ingrediente.UnidadeMedida, faltante));
+                }
+            }
+
+            if (faltasDoPedido.Count > 0)
+            {
+                faltas[pedido.Id] = faltasDoPedido;
+            }
+        }
+
+        return faltas;
     }
 }

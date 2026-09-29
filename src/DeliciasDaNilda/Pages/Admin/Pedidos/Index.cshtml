@@ -1,98 +1,68 @@
 @page
-@using DeliciasDaNilda.Domain.Enums
 @model DeliciasDaNilda.Pages.Admin.Pedidos.IndexModel
 @{
     ViewData["Title"] = "Pedidos";
+    var voltar = $"{Request.Path}{Request.QueryString}";
+    var filtros = new (string Id, string Rotulo)[]
+    {
+        ("ativos", "A entregar"),
+        ("pendentes", "A confirmar"),
+        ("semana", "Próximos 7 dias"),
+        ("entregues", "Entregues"),
+        ("cancelados", "Cancelados"),
+        ("todos", "Todos"),
+    };
+    var totalFaltas = Model.Faltas.Count;
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h4 mb-0">Pedidos</h1>
-</div>
+<h1 class="h4 mb-3">Pedidos</h1>
 
+@if (!string.IsNullOrWhiteSpace(Model.MensagemSucesso))
+{
+    <div class="alert alert-success py-2">@Model.MensagemSucesso</div>
+}
 @if (!string.IsNullOrWhiteSpace(Model.MensagemErro))
 {
-    <div class="alert alert-danger">@Model.MensagemErro</div>
+    <div class="alert alert-danger py-2">@Model.MensagemErro</div>
 }
 
-<div class="dn-card p-3">
-    <form method="get" class="d-flex justify-content-end mb-3">
-        <select asp-for="FiltroStatus" asp-items="Html.GetEnumSelectList<StatusPedido>()" class="form-select" style="max-width:260px;" onchange="this.form.submit()">
-            <option value="">Todos os status</option>
-        </select>
-    </form>
-
-    @if (Model.Pedidos.Count == 0)
+<nav class="dn-chips mb-3" aria-label="Filtrar pedidos">
+    @foreach (var filtro in filtros)
     {
-        <p class="text-center mb-0" style="color:var(--ink-soft);">Nenhum pedido encontrado.</p>
+        var ativo = Model.Filtro == filtro.Id || (filtro.Id == "ativos" && !filtros.Any(x => x.Id == Model.Filtro));
+        <a asp-page="/Admin/Pedidos/Index" asp-route-f="@filtro.Id" class="dn-chip @(ativo ? "ativo" : "")">
+            @filtro.Rotulo
+            @if (filtro.Id == "pendentes" && Model.Contagens.GetValueOrDefault("pendentes") > 0)
+            {
+                <span class="dn-chip-contador">@Model.Contagens["pendentes"]</span>
+            }
+        </a>
     }
+</nav>
 
-    <div class="d-flex flex-column gap-2">
-        @foreach (var pedido in Model.Pedidos)
-        {
-            var badge = DeliciasDaNilda.Pages.Shared.StatusBadgeHelper.Pedido(pedido.StatusPedido);
-            var badgePagamento = DeliciasDaNilda.Pages.Shared.StatusBadgeHelper.Pagamento(pedido.StatusPagamento);
-            var pago = pedido.Pagamentos.Sum(x => x.Valor);
-            var restante = pedido.ValorTotal - pago;
-            var aberto = pedido.StatusPedido is StatusPedido.PendenteConfirmacao or StatusPedido.Confirmado;
-            var digitos = new string(pedido.Cliente.WhatsApp.Where(char.IsDigit).ToArray());
-            if (digitos.Length is 10 or 11) { digitos = "55" + digitos; }
-            var waLink = "https://wa.me/" + digitos;
-            var alvo = "pedido-" + pedido.Id;
-            <div class="dn-pedido">
-                <button type="button" class="dn-pedido-head collapsed" data-bs-toggle="collapse" data-bs-target="#@alvo" aria-expanded="false" aria-controls="@alvo">
-                    <span class="dn-pedido-main">
-                        <span class="dn-pedido-cliente">@pedido.Cliente.NomeCompleto</span>
-                        <span class="dn-pedido-sub">@pedido.Sabor.Nome · @pedido.Peso.ToString("N3") kg</span>
-                    </span>
-                    <span class="dn-pedido-meta">
-                        <span class="dn-pedido-data">Entrega @pedido.DataEntrega.ToString("dd/MM/yyyy")</span>
-                        <span class="dn-pedido-valor">@pedido.ValorTotal.ToString("C")</span>
-                    </span>
-                    <span class="dn-pedido-badges">
-                        <span class="dn-badge @badge.CssClass">● @badge.Label</span>
-                        <span class="dn-badge @badgePagamento.CssClass">● @badgePagamento.Label</span>
-                    </span>
-                    <span class="dn-pedido-chevron" aria-hidden="true">▾</span>
-                </button>
-
-                <div id="@alvo" class="collapse">
-                    <div class="dn-pedido-body">
-                        <dl class="dn-pedido-dl">
-                            <div><dt>WhatsApp</dt><dd><a href="@waLink" target="_blank" rel="noopener">@pedido.Cliente.WhatsApp</a></dd></div>
-                            <div><dt>Preço por kg</dt><dd>@pedido.PrecoPorKgUtilizado.ToString("C")</dd></div>
-                            <div><dt>Horário</dt><dd>@(pedido.HorarioRetirada?.ToString("HH:mm") ?? "a combinar")</dd></div>
-                            <div><dt>Pedido feito em</dt><dd>@pedido.CriadoEm.ToString("dd/MM/yyyy HH:mm")</dd></div>
-                            <div><dt>Já pago</dt><dd>@pago.ToString("C")</dd></div>
-                            @if (pago > 0 && restante > 0)
-                            {
-                                <div><dt>Saldo restante</dt><dd style="font-weight:600;">@restante.ToString("C")</dd></div>
-                            }
-                        </dl>
-
-                        @if (!string.IsNullOrWhiteSpace(pedido.Observacoes))
-                        {
-                            <p class="dn-pedido-obs"><strong>Observações:</strong> @pedido.Observacoes</p>
-                        }
-
-                        <div class="d-flex gap-2 flex-wrap">
-                            @if (pedido.StatusPedido == StatusPedido.PendenteConfirmacao)
-                            {
-                                <form method="post" asp-page-handler="Confirmar" asp-route-id="@pedido.Id">
-                                    <button type="submit" class="btn btn-success btn-sm">Confirmar</button>
-                                </form>
-                            }
-                            @if (aberto)
-                            {
-                                <form method="post" asp-page-handler="Cancelar" asp-route-id="@pedido.Id">
-                                    <button type="submit" class="btn btn-outline-danger btn-sm">Cancelar</button>
-                                </form>
-                            }
-                            <a asp-page="/Admin/Pagamentos/Registrar" asp-route-pedidoId="@pedido.Id" class="btn btn-outline-primary btn-sm">Pagamento</a>
-                            <a href="@waLink" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm">Chamar no WhatsApp</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        }
+@if (totalFaltas > 0)
+{
+    <div class="dn-aviso-falta mb-3">
+        ⚠ @(totalFaltas == 1 ? "1 pedido a confirmar não tem" : $"{totalFaltas} pedidos a confirmar não têm") ingrediente suficiente no estoque.
+        <a asp-page="/Admin/Estoque/Alertas">Ver o que comprar</a>
     </div>
+}
+
+@if (Model.Pedidos.Count == 0)
+{
+    <div class="dn-card p-4 text-center" style="color:var(--ink-soft);">Nenhum pedido aqui.</div>
+}
+
+<div class="d-flex flex-column gap-2">
+    @foreach (var pedido in Model.Pedidos)
+    {
+        <partial name="_PedidoCard" model="new PedidoCardModel(pedido, Model.Faltas.GetValueOrDefault(pedido.Id), Model.Hoje, voltar, Model.Aberto == pedido.Id)" />
+    }
 </div>
+
+@section Scripts {
+    <script>
+        // Depois de uma ação, rola até o card que ficou aberto.
+        document.querySelector('.dn-pedido .collapse.show')?.closest('.dn-pedido')?.scrollIntoView({ block: 'start' });
+    </script>
+}
