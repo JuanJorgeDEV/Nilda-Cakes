@@ -222,6 +222,37 @@ namespace DeliciasDaNilda.Migrations
                     b.ToTable("Ingredientes", (string)null);
                 });
 
+            modelBuilder.Entity("DeliciasDaNilda.Domain.Entities.MensagemBot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AtualizadoEm")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("Chave")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<string>("Texto")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Chave")
+                        .IsUnique();
+
+                    b.ToTable("MensagensBot", (string)null);
+                });
+
             modelBuilder.Entity("DeliciasDaNilda.Domain.Entities.MovimentoEstoque", b =>
                 {
                     b.Property<long>("Id")

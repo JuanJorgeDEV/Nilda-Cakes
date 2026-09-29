@@ -30,6 +30,7 @@ builder.Services.AddScoped<ISaborService, SaborService>();
 builder.Services.AddScoped<IIngredienteService, IngredienteService>();
 builder.Services.AddScoped<IConfiguracaoService, ConfiguracaoService>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
+builder.Services.AddScoped<IMensagemBotService, MensagemBotService>();
 
 // Sessão simples usada apenas para a identificação simplificada de Cliente
 // (nome + WhatsApp, sem senha — RN01). O ADM (RN02) usa autenticação por

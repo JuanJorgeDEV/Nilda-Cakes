@@ -34,6 +34,9 @@ public class AppDbContext : DbContext
     /// <summary>Tabela singleton — deve conter exatamente uma linha (ver seed em Program.cs).</summary>
     public DbSet<Configuracao> Configuracoes => Set<Configuracao>();
 
+    /// <summary>Overrides dos textos do bot de WhatsApp (padrões em MensagensBotPadrao).</summary>
+    public DbSet<MensagemBot> MensagensBot => Set<MensagemBot>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
