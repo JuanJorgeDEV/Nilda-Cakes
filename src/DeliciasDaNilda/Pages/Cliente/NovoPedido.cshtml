@@ -16,8 +16,8 @@
 <div class="dn-saudacao">
     <span>Oi, <strong>@primeiroNome</strong>! 👋</span>
     <span>
-        <a asp-page="/Cliente/MeusPedidos">meus pedidos</a> ·
-        <a asp-page="/Cliente/Identificacao" asp-route-trocar="true">não é você?</a>
+        <a asp-page="/Cliente/MeusPedidos" class="btn btn-outline-primary btn-sm">Meus pedidos</a>
+        <a asp-page="/Cliente/Identificacao" asp-route-trocar="true" class="btn btn-outline-secondary btn-sm">Não sou eu</a>
     </span>
 </div>
 
@@ -57,6 +57,15 @@
                     }
                     <span class="dn-bolo-preco">@sabor.PrecoPorKg.ToString("C") o kg</span>
                 </label>
+            }
+            @if (Model.LinkOutroBolo is not null)
+            {
+                <a href="@Model.LinkOutroBolo" target="_blank" rel="noopener" class="dn-bolo dn-bolo-outro">
+                    <span class="dn-bolo-foto sem-foto"><span>?</span></span>
+                    <span class="dn-bolo-nome">Outro?</span>
+                    <span class="dn-bolo-desc">Não achou o bolo que queria? Fale com a Nilda.</span>
+                    <span class="dn-bolo-preco">abre o WhatsApp</span>
+                </a>
             }
         </div>
     </section>
@@ -176,9 +185,15 @@
     </section>
 
     <div class="dn-etapa-botoes">
-        <button type="button" class="btn btn-outline-secondary" id="btn-voltar" hidden>Voltar</button>
-        <button type="button" class="btn btn-primary flex-grow-1" id="btn-avancar">Continuar</button>
-        <button type="submit" class="btn btn-primary flex-grow-1" id="btn-confirmar" hidden>Confirmar pedido</button>
+        <div class="dn-etapa-linha">
+            <button type="button" class="btn btn-outline-secondary" id="btn-voltar" hidden>Voltar</button>
+            <button type="button" class="btn btn-primary flex-grow-1" id="btn-avancar">Continuar</button>
+            <button type="submit" class="btn btn-primary flex-grow-1" id="btn-confirmar" hidden>Confirmar pedido</button>
+        </div>
+        @if (Model.LinkConversar is not null)
+        {
+            <a href="@Model.LinkConversar" target="_blank" rel="noopener" class="btn btn-outline-whatsapp">Prefiro pedir pelo WhatsApp</a>
+        }
     </div>
     <p class="dn-etapa-erro" id="etapa-erro" role="alert" hidden></p>
 </form>

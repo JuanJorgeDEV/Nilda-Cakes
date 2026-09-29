@@ -25,7 +25,7 @@
 
     <div class="d-flex justify-content-between align-items-baseline mb-2">
         <div class="dn-eyebrow">Pedido @MensagemPedidoWhatsApp.Codigo(pedido.Id)</div>
-        <a asp-page="/Cliente/MeusPedidos" class="small">meus pedidos</a>
+        <a asp-page="/Cliente/MeusPedidos" class="btn btn-outline-primary btn-sm">Meus pedidos</a>
     </div>
 
     <div class="dn-card-highlight p-4">
@@ -94,7 +94,7 @@
                 @(passo == 1 ? "Enviar pedido no WhatsApp" : "Falar com a Nilda no WhatsApp")
             </a>
         }
-        <a asp-page="/Cliente/MeusPedidos" class="btn btn-link w-100 mt-2">Ver todos os meus pedidos</a>
+        <a asp-page="/Cliente/MeusPedidos" class="btn btn-outline-primary w-100 mt-2">Ver todos os meus pedidos</a>
     </div>
 
     @if (Model.LinkWhatsApp is not null)
@@ -110,7 +110,7 @@
                             com tudo o que você escolheu. É por lá que ela confirma a encomenda.
                         </p>
                         <a href="@Model.LinkWhatsApp" target="_blank" rel="noopener" class="btn btn-whatsapp w-100 btn-lg mb-2">Enviar pelo WhatsApp</a>
-                        <button type="button" class="btn btn-link btn-sm" data-bs-dismiss="modal">Enviar depois</button>
+                        <button type="button" class="btn btn-outline-secondary w-100" data-bs-dismiss="modal">Enviar depois</button>
                     </div>
                 </div>
             </div>

@@ -43,7 +43,7 @@
 
             <div class="dn-numero-confirmado mb-3">
                 <span>WhatsApp: <strong>@Model.WhatsApp</strong></span>
-                <a asp-page="/Cliente/Identificacao" asp-route-trocar="true">trocar</a>
+                <a asp-page="/Cliente/Identificacao" asp-route-trocar="true" class="btn btn-outline-secondary btn-sm py-0">Trocar</a>
             </div>
 
             @if (Model.CompletandoCadastro)
@@ -60,7 +60,7 @@
             <div class="d-flex gap-2 align-items-center mb-1">
                 <input id="cep" name="Cep" value="@Model.Cep" inputmode="numeric" autocomplete="postal-code" maxlength="9"
                        class="form-control" style="max-width:150px;" placeholder="00000-000" required />
-                <a href="https://buscacepinter.correios.com.br/app/endereco/index.php" target="_blank" rel="noopener" class="small">não sei meu CEP</a>
+                <a href="https://buscacepinter.correios.com.br/app/endereco/index.php" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm">Não sei meu CEP</a>
             </div>
             <div id="cep-resultado" class="dn-cep-resultado mb-3" @(string.IsNullOrWhiteSpace(Model.Bairro) ? "hidden" : "")>
                 <span id="cep-texto">@Model.Bairro@(string.IsNullOrWhiteSpace(Model.Cidade) ? "" : $", {Model.Cidade}")</span>

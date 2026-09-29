@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using DeliciasDaNilda.Domain.Entities;
 using DeliciasDaNilda.Services;
+using DeliciasDaNilda.Services.Common;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
@@ -19,9 +20,15 @@ public class NovoPedidoModel : PageModel
     private readonly IPedidoService _pedidoService;
     private readonly IAgendamentoService _agendamentoService;
     private readonly ISaborService _saborService;
+    private readonly IConfiguracaoService _configuracao;
 
-    public NovoPedidoModel(IPedidoService pedidoService, IAgendamentoService agendamentoService, ISaborService saborService)
+    public NovoPedidoModel(
+        IPedidoService pedidoService,
+        IAgendamentoService agendamentoService,
+        ISaborService saborService,
+        IConfiguracaoService configuracao)
     {
+        _configuracao = configuracao;
         _pedidoService = pedidoService;
         _agendamentoService = agendamentoService;
         _saborService = saborService;
@@ -37,6 +44,12 @@ public class NovoPedidoModel : PageModel
     public string? ClienteNome { get; set; }
 
     public string? Erro { get; set; }
+
+    /// <summary>Link wa.me para pedir um bolo fora do cardápio (null se a loja não cadastrou o número).</summary>
+    public string? LinkOutroBolo { get; set; }
+
+    /// <summary>Link wa.me para a cliente que prefere fazer o pedido conversando.</summary>
+    public string? LinkConversar { get; set; }
 
     public class EntradaModel
     {
@@ -119,6 +132,15 @@ public class NovoPedidoModel : PageModel
     private async Task CarregarDadosDeApoioAsync(CancellationToken ct)
     {
         SaboresDisponiveis = await _saborService.ListarAsync(apenasDisponiveis: true, ct);
+
+        var numeroLoja = await _configuracao.WhatsAppLojaAsync(ct);
+        if (numeroLoja is not null)
+        {
+            var nome = (ClienteNome ?? string.Empty).Split(' ')[0];
+            var saudacao = string.IsNullOrWhiteSpace(nome) ? "Oi, Nilda!" : $"Oi, Nilda! Aqui é {nome}.";
+            LinkOutroBolo = MensagemPedidoWhatsApp.Link(numeroLoja, saudacao + " Quero encomendar um bolo que não está no cardápio.");
+            LinkConversar = MensagemPedidoWhatsApp.Link(numeroLoja, saudacao + " Prefiro fazer minha encomenda pelo WhatsApp.");
+        }
 
         // RN05: data mínima de entrega (3 dias úteis a partir de agora).
         var dataMinima = _agendamentoService.CalcularDataMinimaPermitida(DateTime.UtcNow);

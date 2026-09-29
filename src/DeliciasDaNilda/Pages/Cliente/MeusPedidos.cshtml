@@ -18,7 +18,7 @@
 
 <div class="dn-saudacao">
     <span>Pedidos de <strong>@((Model.ClienteNome ?? "").Split(' ')[0])</strong></span>
-    <a asp-page="/Cliente/Identificacao" asp-route-trocar="true">não é você?</a>
+    <a asp-page="/Cliente/Identificacao" asp-route-trocar="true" class="btn btn-outline-secondary btn-sm">Não sou eu</a>
 </div>
 
 @if (Model.Pedidos.Count == 0)
