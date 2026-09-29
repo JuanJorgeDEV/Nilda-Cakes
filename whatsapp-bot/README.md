@@ -93,20 +93,33 @@ nao insistir em mandar o mesmo aviso a cada mensagem).
 
 ## Fluxo da conversa
 
-1. Qualquer mensagem sem um pedido em andamento mostra o menu:
-   `1. Ver sabores` / `2. Fazer um pedido` / `3. Falar com a Nilda`.
-2. **Opcao 1**: lista os sabores e precos por kg (`GET /sabores`).
-3. **Opcao 2**: fluxo guiado — nome completo, confirmacao do numero de
-   WhatsApp, escolha do sabor, peso em kg, escolha da data de entrega
-   (`GET /datas-disponiveis`, so mostrando datas com `disponivel: true`),
-   observacoes opcionais, resumo e confirmacao final antes de chamar
-   `POST /pedidos`.
-4. **Opcao 3**: apenas informa que a Nilda respondera manualmente; nenhuma
-   acao automatica e disparada.
+Os textos vem do painel (WhatsApp → Mensagens do bot); a ordem das perguntas
+fica no codigo. Detalhes em [docs/atendimento-whatsapp.md](../docs/atendimento-whatsapp.md).
 
-Qualquer resposta invalida (texto onde se espera numero, numero fora do
-intervalo de opcoes) reexibe as opcoes validas do passo atual, sem travar a
-conversa.
+1. **Mensagem com codigo `#P123`** (a mensagem pronta que o site monta): o
+   bot confere que o pedido e deste numero, responde com o resumo e pergunta
+   por personalizacao ou foto de referencia. Texto fica anotado no pedido;
+   foto fica na conversa. **Nao cria outro pedido.**
+2. **Numero novo**: cadastro primeiro (nome e CEP; bairro e cidade pelo
+   ViaCEP), depois o menu.
+3. **Cliente conhecido**: menu `1. Ver sabores` / `2. Fazer um pedido` /
+   `3. Ver meus pedidos` / `4. Falar com a Nilda`.
+   - Pedido: sabor, peso (aceita `1,5`), data com vaga
+     (`GET /datas-disponiveis`), observacao, resumo e confirmacao antes de
+     chamar `POST /pedidos`.
+   - Falar com a Nilda: o bot fica em silencio com essa pessoa ate ela
+     mandar *menu*.
+
+Qualquer resposta invalida reexibe as opcoes validas do passo atual, sem
+travar a conversa. A qualquer momento, *menu* volta ao inicio.
+
+## Testes
+
+```bash
+npm test
+```
+
+Testa a maquina de conversa com uma API falsa (sem WhatsApp e sem o .NET).
 
 ## Estrutura de arquivos
 
@@ -114,8 +127,10 @@ conversa.
 whatsapp-bot/
 ├── index.js              # conexao Baileys, QR code, roteamento de mensagens
 ├── src/
-│   ├── apiClient.js      # chamadas HTTP para a API interna .NET
+│   ├── apiClient.js      # chamadas HTTP para a API interna .NET (e ViaCEP)
 │   └── conversation.js   # maquina de estados da conversa (em memoria)
+├── test/
+│   └── conversation.test.js
 ├── package.json
 ├── .env.example
 ├── auth_info/            # sessao do WhatsApp (criada em runtime, git-ignored)

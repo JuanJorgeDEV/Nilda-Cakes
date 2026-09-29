@@ -6,346 +6,445 @@
  * Guardada em memoria (Map), sem persistencia em banco — se o processo
  * reiniciar, quem estava no meio de um pedido precisa comecar de novo.
  * Nenhuma regra de negocio (preco, antecedencia, capacidade, etc.) e
- * decidida aqui: este modulo so coleta respostas do usuario e chama a API
- * (via apiClient) nos pontos certos, repassando o que a API responder.
+ * decidida aqui: este modulo so conduz a conversa e chama a API interna
+ * (.NET) nos pontos certos, repassando o que a API responder.
+ *
+ * Os TEXTOS vem da API (GET /mensagens), editaveis pela Nilda no painel.
+ * A ordem das perguntas e fixa aqui.
+ *
+ * Caminhos da conversa:
+ *  - Numero novo: cadastro (nome + CEP) antes de qualquer coisa.
+ *  - Mensagem com "#P123" (enviada pelo site): reconhece o pedido feito no
+ *    site e pergunta por personalizacao/foto de referencia — nao cria outro
+ *    pedido.
+ *  - Cliente conhecido: menu (sabores, fazer pedido, meus pedidos, falar
+ *    com a Nilda).
  */
-
-const api = require('./apiClient');
-
-/** @type {Map<string, any>} jid -> estado da conversa */
-const sessions = new Map();
 
 const STEPS = {
   MENU: 'MENU',
-  PEDIDO_NOME: 'PEDIDO_NOME',
-  PEDIDO_CONFIRMA_WHATSAPP: 'PEDIDO_CONFIRMA_WHATSAPP',
+  CADASTRO_NOME: 'CADASTRO_NOME',
+  CADASTRO_CEP: 'CADASTRO_CEP',
   PEDIDO_SABOR: 'PEDIDO_SABOR',
   PEDIDO_PESO: 'PEDIDO_PESO',
   PEDIDO_DATA: 'PEDIDO_DATA',
   PEDIDO_OBSERVACAO: 'PEDIDO_OBSERVACAO',
   PEDIDO_CONFIRMACAO: 'PEDIDO_CONFIRMACAO',
+  PERSONALIZACAO: 'PERSONALIZACAO',
+  SILENCIO: 'SILENCIO',
 };
 
-const MENU_TEXT =
-  'Ola! Sou o atendimento automatico da *Delicias da Nilda*. Escolha uma opcao:\n\n' +
-  '1. Ver sabores disponiveis\n' +
-  '2. Fazer um pedido\n' +
-  '3. Falar com a Nilda\n\n' +
-  'Responda com o numero da opcao desejada.';
+// Usado so se a API de mensagens estiver fora do ar.
+const TEXTO_INDISPONIVEL = 'Desculpe, o sistema esta temporariamente indisponivel. Tente novamente em instantes.';
+const CACHE_MENSAGENS_MS = 60_000;
 
-const BOT_INATIVO_TEXT =
-  'No momento o atendimento automatico esta desativado. Por favor, entre em ' +
-  'contato diretamente com a Delicias da Nilda para fazer seu pedido.';
+const RESPOSTAS_NAO = ['nao', 'não', 'n', 'nada', 'nenhum', 'nenhuma', 'sem'];
+const RESPOSTAS_SIM = ['sim', 's', 'ok', 'isso', 'confirmo', 'pode'];
 
-function novaSessao() {
-  return { step: STEPS.MENU, dados: {}, cache: {}, avisouInativo: false };
+function normalizarResposta(texto) {
+  return (texto || '').trim().toLowerCase().replace(/[.!]+$/, '');
 }
 
-function getSessao(jid) {
-  let sessao = sessions.get(jid);
-  if (!sessao) {
-    sessao = novaSessao();
-    sessao.jid = jid;
-    sessions.set(jid, sessao);
-  }
-  return sessao;
+function ehNao(texto) {
+  return RESPOSTAS_NAO.includes(normalizarResposta(texto));
 }
 
-function resetSessao(jid) {
-  sessions.set(jid, novaSessao());
-}
-
-function formatarWhatsAppFromJid(jid) {
-  // jid tipico: "5547999999999@s.whatsapp.net"
-  const numero = jid.split('@')[0].replace(/[^0-9]/g, '');
-  return `+${numero}`;
+function ehSim(texto) {
+  return RESPOSTAS_SIM.includes(normalizarResposta(texto));
 }
 
 function formatarMoeda(valor) {
   return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
-function parsePositiveNumber(texto) {
-  const normalizado = texto.trim().replace(',', '.');
-  const valor = Number(normalizado);
-  if (!Number.isFinite(valor) || valor <= 0) {
-    return null;
-  }
-  return valor;
+/** Aceita "1,5", "1.5", "1,5 kg", "2kg". */
+function parsePeso(texto) {
+  const limpo = (texto || '').toLowerCase().replace('kg', '').replace(',', '.').trim();
+  const valor = Number(limpo);
+  return Number.isFinite(valor) && valor > 0 ? valor : null;
 }
 
 function parseOpcao(texto, min, max) {
-  const valor = Number(texto.trim());
+  const valor = Number((texto || '').trim());
   if (!Number.isInteger(valor) || valor < min || valor > max) {
     return null;
   }
   return valor;
 }
 
+/** "5516999990001@s.whatsapp.net" -> "5516999990001" */
+function numeroDoJid(jid) {
+  return (jid || '').split('@')[0].split(':')[0].replace(/[^0-9]/g, '');
+}
+
 /**
- * Processa uma mensagem recebida e retorna o texto (ou lista de textos) de
- * resposta a enviar. Nunca lanca excecao por entrada invalida do usuario —
- * qualquer entrada inesperada reexibe as opcoes validas do passo atual.
- *
- * @param {string} jid identificador do remetente no Baileys
- * @param {string} textoBruto conteudo da mensagem recebida
- * @returns {Promise<string[]>} lista de mensagens a enviar, em ordem
+ * Cria a conversa ligada a uma API (injetada para facilitar testes).
+ * @param {object} api modulo ./apiClient (ou um dublê nos testes)
  */
-async function handleMessage(jid, textoBruto) {
-  const texto = (textoBruto || '').trim();
+function criarConversa(api) {
+  /** @type {Map<string, any>} numero -> estado da conversa */
+  const sessoes = new Map();
+  let mensagens = null;
+  let mensagensCarregadasEm = 0;
 
-  // RN: bot so responde se estiver ativo no painel ADM (config remota, sem
-  // regra de negocio reimplementada aqui — so consulta GET /status).
-  let status;
-  try {
-    status = await api.getStatus();
-  } catch (err) {
-    console.error('[conversation] Falha ao consultar /status:', err.message);
-    return ['Desculpe, o sistema esta temporariamente indisponivel. Tente novamente em instantes.'];
+  function novaSessao() {
+    return { step: STEPS.MENU, dados: {}, cache: {}, cliente: null, avisouInativo: false };
   }
 
-  if (!status.ativo) {
-    const sessao = getSessao(jid);
-    if (!sessao.avisouInativo) {
-      sessao.avisouInativo = true;
-      return [BOT_INATIVO_TEXT];
+  function getSessao(numero) {
+    if (!sessoes.has(numero)) sessoes.set(numero, novaSessao());
+    return sessoes.get(numero);
+  }
+
+  async function carregarMensagens() {
+    const agora = Date.now();
+    if (mensagens && agora - mensagensCarregadasEm < CACHE_MENSAGENS_MS) return mensagens;
+    try {
+      mensagens = await api.getMensagens();
+      mensagensCarregadasEm = agora;
+    } catch (err) {
+      console.error('[conversation] Falha ao buscar mensagens:', err.message);
+      if (!mensagens) throw err;
     }
-    return [];
+    return mensagens;
   }
 
-  const sessao = getSessao(jid);
-  sessao.avisouInativo = false;
-
-  switch (sessao.step) {
-    case STEPS.MENU:
-      return handleMenu(jid, sessao, texto);
-    case STEPS.PEDIDO_NOME:
-      return handlePedidoNome(sessao, texto);
-    case STEPS.PEDIDO_CONFIRMA_WHATSAPP:
-      return handlePedidoConfirmaWhatsApp(jid, sessao, texto);
-    case STEPS.PEDIDO_SABOR:
-      return handlePedidoSabor(sessao, texto);
-    case STEPS.PEDIDO_PESO:
-      return handlePedidoPeso(sessao, texto);
-    case STEPS.PEDIDO_DATA:
-      return handlePedidoData(sessao, texto);
-    case STEPS.PEDIDO_OBSERVACAO:
-      return handlePedidoObservacao(sessao, texto);
-    case STEPS.PEDIDO_CONFIRMACAO:
-      return handlePedidoConfirmacao(sessao, texto);
-    default:
-      resetSessao(jid);
-      return [MENU_TEXT];
-  }
-}
-
-async function handleMenu(jid, sessao, texto) {
-  const opcao = parseOpcao(texto, 1, 3);
-
-  if (opcao === null) {
-    return [MENU_TEXT];
+  /** Texto da mensagem configurada, trocando {nome}, {numero}... */
+  function msg(chave, vars = {}) {
+    let texto = (mensagens && mensagens[chave]) || '';
+    for (const [nome, valor] of Object.entries(vars)) {
+      texto = texto.split(`{${nome}}`).join(valor == null ? '' : String(valor));
+    }
+    return texto;
   }
 
-  if (opcao === 1) {
-    return listarSabores();
+  function menu(sessao) {
+    return msg('menu', { nome: sessao.cliente ? sessao.cliente.primeiroNome : '' });
   }
 
-  if (opcao === 2) {
-    sessao.step = STEPS.PEDIDO_NOME;
+  async function buscarCliente(numero, sessao) {
+    try {
+      sessao.cliente = await api.getCliente(numero);
+    } catch (err) {
+      if (err.response && err.response.status === 404) {
+        sessao.cliente = null;
+      } else {
+        throw err;
+      }
+    }
+    return sessao.cliente;
+  }
+
+  /**
+   * Processa uma mensagem recebida e devolve as respostas a enviar, em
+   * ordem. Nunca lanca excecao por entrada invalida — reexibe as opcoes.
+   *
+   * @param {string} numero telefone do remetente (so digitos, com DDI)
+   * @param {string} textoBruto texto da mensagem (legenda, se for foto)
+   * @param {{tipo?: 'texto'|'imagem'}} [opcoes]
+   * @returns {Promise<string[]>}
+   */
+  async function handleMessage(numero, textoBruto, opcoes = {}) {
+    const texto = (textoBruto || '').trim();
+    const tipo = opcoes.tipo || 'texto';
+
+    let status;
+    try {
+      status = await api.getStatus();
+      await carregarMensagens();
+    } catch (err) {
+      console.error('[conversation] API indisponivel:', err.message);
+      return [TEXTO_INDISPONIVEL];
+    }
+
+    const sessao = getSessao(numero);
+
+    if (!status.ativo) {
+      if (!sessao.avisouInativo) {
+        sessao.avisouInativo = true;
+        return [msg('bot_desativado')];
+      }
+      return [];
+    }
+    sessao.avisouInativo = false;
+
+    try {
+      // "Falar com a Nilda": silencio ate a cliente mandar "menu".
+      if (sessao.step === STEPS.SILENCIO) {
+        if (normalizarResposta(texto) !== 'menu') return [];
+        sessao.step = STEPS.MENU;
+      }
+
+      // Pedido feito no site: a mensagem pronta traz o codigo #P123.
+      const codigoSite = texto.match(/#P(\d+)/i);
+      if (codigoSite) {
+        return await handlePedidoSite(numero, sessao, Number(codigoSite[1]));
+      }
+
+      if (tipo === 'imagem') {
+        return sessao.step === STEPS.PERSONALIZACAO ? await handlePersonalizacao(numero, sessao, texto, tipo) : [];
+      }
+
+      // Cadastro em andamento.
+      if (sessao.step === STEPS.CADASTRO_NOME) return handleCadastroNome(sessao, texto);
+      if (sessao.step === STEPS.CADASTRO_CEP) return await handleCadastroCep(numero, sessao, texto);
+
+      // Numero novo (ou sem CEP): cadastro antes de tudo.
+      if (!sessao.cliente || sessao.step === STEPS.MENU) {
+        await buscarCliente(numero, sessao);
+      }
+      if (!sessao.cliente) {
+        sessao.step = STEPS.CADASTRO_NOME;
+        sessao.dados = {};
+        return [msg('pergunta_nome')];
+      }
+      if (!sessao.cliente.temCep) {
+        sessao.step = STEPS.CADASTRO_CEP;
+        sessao.dados = { nomeCompleto: sessao.cliente.nome };
+        return [msg('pergunta_cep', { nome: sessao.cliente.primeiroNome })];
+      }
+
+      if (normalizarResposta(texto) === 'menu') {
+        sessao.step = STEPS.MENU;
+        sessao.dados = {};
+        return [menu(sessao)];
+      }
+
+      switch (sessao.step) {
+        case STEPS.MENU:
+          return await handleMenu(sessao, texto);
+        case STEPS.PEDIDO_SABOR:
+          return handlePedidoSabor(sessao, texto);
+        case STEPS.PEDIDO_PESO:
+          return await handlePedidoPeso(sessao, texto);
+        case STEPS.PEDIDO_DATA:
+          return handlePedidoData(sessao, texto);
+        case STEPS.PEDIDO_OBSERVACAO:
+          return handlePedidoObservacao(sessao, texto);
+        case STEPS.PEDIDO_CONFIRMACAO:
+          return await handlePedidoConfirmacao(numero, sessao, texto);
+        case STEPS.PERSONALIZACAO:
+          return await handlePersonalizacao(numero, sessao, texto, tipo);
+        default:
+          sessao.step = STEPS.MENU;
+          return [menu(sessao)];
+      }
+    } catch (err) {
+      console.error('[conversation] Erro ao falar com a API:', err.message);
+      return [msg('erro_temporario')];
+    }
+  }
+
+  // ---- Cadastro -----------------------------------------------------------
+
+  function handleCadastroNome(sessao, texto) {
+    if (!texto || texto.length < 3 || /^\d+$/.test(texto)) {
+      return [msg('nome_invalido')];
+    }
+    sessao.dados.nomeCompleto = texto;
+    sessao.step = STEPS.CADASTRO_CEP;
+    return [msg('pergunta_cep', { nome: texto.split(' ')[0] })];
+  }
+
+  async function handleCadastroCep(numero, sessao, texto) {
+    const cep = texto.replace(/\D/g, '');
+    if (cep.length !== 8) {
+      return [msg('cep_invalido')];
+    }
+
+    // Bairro e cidade pelo ViaCEP (opcional: se falhar, segue so com o CEP).
+    const endereco = api.buscarCep ? await api.buscarCep(cep) : null;
+
+    const resultado = await api.cadastrarCliente({
+      nomeCompleto: sessao.dados.nomeCompleto,
+      whatsApp: numero,
+      cep,
+      bairro: endereco ? endereco.bairro : null,
+      cidade: endereco ? endereco.cidade : null,
+    });
+
+    if (!resultado.sucesso) {
+      return [resultado.erro];
+    }
+
+    sessao.cliente = resultado.cliente;
+    sessao.step = STEPS.MENU;
     sessao.dados = {};
-    return ['Vamos comecar seu pedido! Qual e o seu nome completo?'];
+    return [msg('cadastro_concluido', { nome: sessao.cliente.primeiroNome }), menu(sessao)];
   }
 
-  // opcao === 3
-  return [
-    'Certo! A Nilda vai te responder por aqui assim que possivel. ' +
-      'Nenhuma acao automatica sera feita a partir de agora nesta conversa.',
-  ];
-}
+  // ---- Menu ---------------------------------------------------------------
 
-async function listarSabores() {
-  try {
+  async function handleMenu(sessao, texto) {
+    const opcao = parseOpcao(texto, 1, 4);
+    if (opcao === null) return [menu(sessao)];
+
+    if (opcao === 1) return await listarSabores(sessao);
+    if (opcao === 2) return await prepararEscolhaSabor(sessao);
+    if (opcao === 3) return listarMeusPedidos(sessao);
+
+    sessao.step = STEPS.SILENCIO;
+    return [msg('falar_com_nilda')];
+  }
+
+  async function listarSabores(sessao) {
     const sabores = await api.getSabores();
-    if (!sabores.length) {
-      return ['No momento nao ha sabores disponiveis cadastrados. Tente novamente mais tarde.'];
-    }
-    const linhas = sabores.map((s) => `- ${s.nome}: ${formatarMoeda(s.precoPorKg)}/kg`);
-    return ['*Sabores disponiveis:*\n' + linhas.join('\n'), MENU_TEXT];
-  } catch (err) {
-    console.error('[conversation] Falha ao buscar sabores:', err.message);
-    return ['Nao consegui buscar os sabores agora. Tente novamente em instantes.'];
-  }
-}
-
-function handlePedidoNome(sessao, texto) {
-  if (!texto || texto.length < 3) {
-    return ['Por favor, informe seu nome completo (nome e sobrenome).'];
-  }
-  sessao.dados.nomeCompleto = texto;
-  sessao.step = STEPS.PEDIDO_CONFIRMA_WHATSAPP;
-  return [
-    `Obrigado, ${texto}! Podemos usar este numero de WhatsApp para o pedido? ` +
-      'Responda *sim* para confirmar ou digite outro numero (com DDD).',
-  ];
-}
-
-async function handlePedidoConfirmaWhatsApp(jid, sessao, texto) {
-  const textoLower = texto.toLowerCase();
-
-  if (textoLower === 'sim' || textoLower === 's') {
-    sessao.dados.whatsApp = formatarWhatsAppFromJid(jid);
-  } else if (/^[0-9()+\-.\s]{8,}$/.test(texto)) {
-    sessao.dados.whatsApp = texto;
-  } else {
-    return ['Nao entendi. Responda *sim* para usar este numero, ou digite outro numero de WhatsApp valido.'];
+    if (!sabores.length) return [msg('sem_sabores')];
+    const linhas = sabores.map((s) => `• ${s.nome} — ${formatarMoeda(s.precoPorKg)}/kg`);
+    return [msg('sabores_titulo') + '\n' + linhas.join('\n'), menu(sessao)];
   }
 
-  return prepararEscolhaSabor(sessao);
-}
+  function listarMeusPedidos(sessao) {
+    const pedidos = (sessao.cliente && sessao.cliente.pedidos) || [];
+    if (!pedidos.length) return [msg('sem_pedidos')];
+    const linhas = pedidos.map((p) => `*${p.codigo}* ${p.resumo}\n   ${p.situacao}`);
+    return [msg('meus_pedidos_titulo') + '\n\n' + linhas.join('\n\n')];
+  }
 
-async function prepararEscolhaSabor(sessao) {
-  try {
+  // ---- Pedido pelo WhatsApp -----------------------------------------------
+
+  function textoSabores(sabores) {
+    return sabores.map((s, i) => `${i + 1}. ${s.nome} (${formatarMoeda(s.precoPorKg)}/kg)`).join('\n');
+  }
+
+  async function prepararEscolhaSabor(sessao) {
     const sabores = await api.getSabores();
-    if (!sabores.length) {
-      return ['No momento nao ha sabores disponiveis para pedido. Tente novamente mais tarde.'];
-    }
+    if (!sabores.length) return [msg('sem_sabores')];
     sessao.cache.sabores = sabores;
+    sessao.dados = {};
     sessao.step = STEPS.PEDIDO_SABOR;
-    const linhas = sabores.map((s, i) => `${i + 1}. ${s.nome} (${formatarMoeda(s.precoPorKg)}/kg)`);
-    return ['Escolha o sabor pelo numero:\n' + linhas.join('\n')];
-  } catch (err) {
-    console.error('[conversation] Falha ao buscar sabores:', err.message);
-    return ['Nao consegui buscar os sabores agora. Tente novamente em instantes.'];
-  }
-}
-
-function handlePedidoSabor(sessao, texto) {
-  const sabores = sessao.cache.sabores || [];
-  const opcao = parseOpcao(texto, 1, sabores.length);
-
-  if (opcao === null) {
-    const linhas = sabores.map((s, i) => `${i + 1}. ${s.nome} (${formatarMoeda(s.precoPorKg)}/kg)`);
-    return ['Opcao invalida. Escolha o sabor pelo numero:\n' + linhas.join('\n')];
+    return [msg('pergunta_sabor') + '\n' + textoSabores(sabores)];
   }
 
-  const saborEscolhido = sabores[opcao - 1];
-  sessao.dados.saborId = saborEscolhido.id;
-  sessao.dados.saborNome = saborEscolhido.nome;
-  sessao.dados.precoPorKg = saborEscolhido.precoPorKg;
-  sessao.step = STEPS.PEDIDO_PESO;
-  return ['Qual o peso desejado, em quilos? (ex: 1.5)'];
-}
+  function handlePedidoSabor(sessao, texto) {
+    const sabores = sessao.cache.sabores || [];
+    const opcao = parseOpcao(texto, 1, sabores.length);
+    if (opcao === null) return [msg('opcao_invalida') + '\n' + textoSabores(sabores)];
 
-function handlePedidoPeso(sessao, texto) {
-  const peso = parsePositiveNumber(texto);
-  if (peso === null) {
-    return ['Peso invalido. Informe um numero positivo em quilos (ex: 1.5).'];
+    const sabor = sabores[opcao - 1];
+    sessao.dados.saborId = sabor.id;
+    sessao.dados.saborNome = sabor.nome;
+    sessao.step = STEPS.PEDIDO_PESO;
+    return [msg('pergunta_peso')];
   }
-  sessao.dados.pesoKg = peso;
-  return prepararEscolhaData(sessao);
-}
 
-async function prepararEscolhaData(sessao) {
-  try {
-    const datas = await api.getDatasDisponiveis(10);
+  async function handlePedidoPeso(sessao, texto) {
+    const peso = parsePeso(texto);
+    if (peso === null) return [msg('peso_invalido')];
+    sessao.dados.pesoKg = peso;
+
+    const datas = await api.getDatasDisponiveis(14);
     const disponiveis = datas.filter((d) => d.disponivel);
     if (!disponiveis.length) {
-      return ['Nao ha datas disponiveis no momento. Tente novamente mais tarde ou fale com a Nilda (opcao 3 no menu).'];
+      sessao.step = STEPS.MENU;
+      return [msg('sem_datas')];
     }
     sessao.cache.datas = disponiveis;
     sessao.step = STEPS.PEDIDO_DATA;
-    const linhas = disponiveis.map((d, i) => `${i + 1}. ${d.data}`);
-    return ['Escolha a data de entrega pelo numero:\n' + linhas.join('\n')];
-  } catch (err) {
-    console.error('[conversation] Falha ao buscar datas disponiveis:', err.message);
-    return ['Nao consegui buscar as datas disponiveis agora. Tente novamente em instantes.'];
-  }
-}
-
-function handlePedidoData(sessao, texto) {
-  const datas = sessao.cache.datas || [];
-  const opcao = parseOpcao(texto, 1, datas.length);
-
-  if (opcao === null) {
-    const linhas = datas.map((d, i) => `${i + 1}. ${d.data}`);
-    return ['Opcao invalida. Escolha a data pelo numero:\n' + linhas.join('\n')];
+    return [msg('pergunta_data') + '\n' + textoDatas(disponiveis)];
   }
 
-  sessao.dados.dataEntrega = datas[opcao - 1].data;
-  sessao.step = STEPS.PEDIDO_OBSERVACAO;
-  return ['Deseja adicionar alguma observacao ao pedido? Se nao, responda *nao*.'];
-}
-
-function handlePedidoObservacao(sessao, texto) {
-  const textoLower = texto.toLowerCase();
-  sessao.dados.observacoes = textoLower === 'nao' || textoLower === 'não' || textoLower === 'n' ? undefined : texto;
-  sessao.step = STEPS.PEDIDO_CONFIRMACAO;
-
-  const d = sessao.dados;
-  const resumo =
-    '*Resumo do pedido:*\n' +
-    `Nome: ${d.nomeCompleto}\n` +
-    `WhatsApp: ${d.whatsApp}\n` +
-    `Sabor: ${d.saborNome}\n` +
-    `Peso: ${d.pesoKg} kg\n` +
-    `Data de entrega: ${d.dataEntrega}\n` +
-    `Observacoes: ${d.observacoes || '(nenhuma)'}\n\n` +
-    'Confirma o pedido? Responda *sim* ou *nao*.';
-
-  return [resumo];
-}
-
-async function handlePedidoConfirmacao(sessao, texto) {
-  const textoLower = texto.toLowerCase();
-
-  if (textoLower === 'nao' || textoLower === 'não' || textoLower === 'n') {
-    resetSessao(sessao.jid);
-    sessao.step = STEPS.MENU;
-    return ['Pedido cancelado. Nenhuma informacao foi enviada.', MENU_TEXT];
+  function textoDatas(datas) {
+    return datas.map((d, i) => `${i + 1}. ${d.texto || d.data}`).join('\n');
   }
 
-  if (textoLower !== 'sim' && textoLower !== 's') {
-    return ['Responda *sim* para confirmar o pedido ou *nao* para cancelar.'];
+  function handlePedidoData(sessao, texto) {
+    const datas = sessao.cache.datas || [];
+    const opcao = parseOpcao(texto, 1, datas.length);
+    if (opcao === null) return [msg('opcao_invalida') + '\n' + textoDatas(datas)];
+
+    sessao.dados.dataEntrega = datas[opcao - 1].data;
+    sessao.dados.dataTexto = datas[opcao - 1].texto || datas[opcao - 1].data;
+    sessao.step = STEPS.PEDIDO_OBSERVACAO;
+    return [msg('pergunta_observacao')];
   }
 
-  const d = sessao.dados;
-  try {
+  function handlePedidoObservacao(sessao, texto) {
+    sessao.dados.observacoes = ehNao(texto) ? undefined : texto;
+    sessao.step = STEPS.PEDIDO_CONFIRMACAO;
+
+    const d = sessao.dados;
+    const peso = String(d.pesoKg).replace('.', ',');
+    const resumo =
+      msg('resumo_titulo') + '\n' +
+      `Bolo: ${d.saborNome}\n` +
+      `Tamanho: ${peso} kg\n` +
+      `Entrega: ${d.dataTexto}\n` +
+      (d.observacoes ? `Obs: ${d.observacoes}\n` : '') +
+      '\n' + msg('resumo_confirmacao');
+    return [resumo];
+  }
+
+  async function handlePedidoConfirmacao(numero, sessao, texto) {
+    if (ehNao(texto)) {
+      sessao.step = STEPS.MENU;
+      sessao.dados = {};
+      return [msg('pedido_cancelado'), menu(sessao)];
+    }
+    if (!ehSim(texto)) return [msg('confirmacao_invalida')];
+
+    const d = sessao.dados;
     const resultado = await api.criarPedido({
-      nomeCompleto: d.nomeCompleto,
-      whatsApp: d.whatsApp,
+      whatsApp: numero,
+      nomeCompleto: sessao.cliente ? sessao.cliente.nome : undefined,
       saborId: d.saborId,
       pesoKg: d.pesoKg,
       dataEntrega: d.dataEntrega,
       observacoes: d.observacoes,
     });
 
-    if (resultado.sucesso) {
-      sessao.step = STEPS.MENU;
-      sessao.dados = {};
-      return [
-        `Pedido #${resultado.id} registrado com sucesso! Valor total: ${formatarMoeda(resultado.valorTotal)}.\n\n` +
-          'A confirmacao final e o horario de entrega serao combinados diretamente com a Nilda.',
-      ];
-    }
-
-    // 400 — mensagem de erro ja pronta em portugues, vinda da API.
     sessao.step = STEPS.MENU;
     sessao.dados = {};
-    return [
-      `Nao foi possivel concluir o pedido: ${resultado.erro}`,
-      'Voce pode tentar novamente respondendo *2* para comecar um novo pedido.',
-      MENU_TEXT,
-    ];
-  } catch (err) {
-    console.error('[conversation] Falha ao criar pedido:', err.message);
-    return ['Nao foi possivel enviar seu pedido agora. Tente novamente em instantes.'];
+    sessao.cliente = null; // recarrega "meus pedidos" na proxima mensagem
+
+    if (resultado.sucesso) {
+      return [msg('pedido_sucesso', { numero: resultado.id, valor: formatarMoeda(resultado.valorTotal) })];
+    }
+    // 400 — motivo ja pronto em portugues, vindo da API (RN05-RN07 etc.).
+    return [msg('pedido_falha', { erro: resultado.erro })];
   }
+
+  // ---- Pedido que veio do site --------------------------------------------
+
+  async function handlePedidoSite(numero, sessao, pedidoId) {
+    const pedido = await api.getPedido(pedidoId, numero);
+    if (!pedido) {
+      return [msg('pedido_site_nao_encontrado', { numero: pedidoId })];
+    }
+
+    await buscarCliente(numero, sessao);
+    sessao.step = STEPS.PERSONALIZACAO;
+    sessao.dados = { pedidoId };
+    return [
+      msg('pedido_site_recebido', {
+        numero: pedidoId,
+        resumo: pedido.resumo,
+        nome: sessao.cliente ? sessao.cliente.primeiroNome : '',
+      }),
+      msg('pergunta_personalizacao'),
+    ];
+  }
+
+  async function handlePersonalizacao(numero, sessao, texto, tipo) {
+    if (tipo !== 'imagem' && ehNao(texto)) {
+      sessao.step = STEPS.MENU;
+      sessao.dados = {};
+      return [msg('personalizacao_fim')];
+    }
+
+    // Texto (ou legenda da foto) fica anotado no pedido; a foto em si fica na conversa.
+    if (texto) {
+      await api.adicionarPersonalizacao(sessao.dados.pedidoId, numero, tipo === 'imagem' ? `[foto] ${texto}` : texto);
+    }
+    return [tipo === 'imagem' ? msg('foto_recebida') : msg('personalizacao_recebida')];
+  }
+
+  return { handleMessage, getSessao, STEPS };
 }
 
 module.exports = {
   STEPS,
-  MENU_TEXT,
-  handleMessage,
-  getSessao,
-  resetSessao,
+  criarConversa,
+  numeroDoJid,
+  parsePeso,
 };

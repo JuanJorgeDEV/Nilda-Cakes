@@ -30,29 +30,33 @@ const http = axios.create({
   },
 });
 
-/**
- * GET /internal/whatsapp-bot/status
- * @returns {Promise<{ativo: boolean}>}
- */
+/** Erro 400 da API vira { sucesso: false, erro } em vez de excecao. */
+function erroDeNegocio(err, padrao) {
+  if (err.response && err.response.status === 400) {
+    return { sucesso: false, erro: (err.response.data && err.response.data.erro) || padrao };
+  }
+  throw err;
+}
+
+/** GET /status → { ativo } */
 async function getStatus() {
   const { data } = await http.get('/internal/whatsapp-bot/status');
   return data;
 }
 
-/**
- * GET /internal/whatsapp-bot/sabores
- * @returns {Promise<Array<{id: number, nome: string, precoPorKg: number}>>}
- */
+/** GET /mensagens → { chave: texto } (textos editaveis no painel) */
+async function getMensagens() {
+  const { data } = await http.get('/internal/whatsapp-bot/mensagens');
+  return data;
+}
+
+/** GET /sabores → [{ id, nome, precoPorKg }] */
 async function getSabores() {
   const { data } = await http.get('/internal/whatsapp-bot/sabores');
   return data;
 }
 
-/**
- * GET /internal/whatsapp-bot/datas-disponiveis?quantidade=N
- * @param {number} quantidade
- * @returns {Promise<Array<{data: string, disponivel: boolean}>>}
- */
+/** GET /datas-disponiveis?quantidade=N → [{ data, texto, disponivel }] */
 async function getDatasDisponiveis(quantidade = 10) {
   const { data } = await http.get('/internal/whatsapp-bot/datas-disponiveis', {
     params: { quantidade },
@@ -61,33 +65,76 @@ async function getDatasDisponiveis(quantidade = 10) {
 }
 
 /**
- * POST /internal/whatsapp-bot/pedidos
- *
- * Em caso de sucesso (201) resolve com { id, valorTotal, status }.
- * Em caso de erro de validacao (400) resolve com { erro: string } (nao
- * lanca excecao) para o chamador decidir o que fazer sem precisar de
- * try/catch para o fluxo esperado de negocio.
- * Qualquer outro erro (rede, 401, 5xx) e relancado.
- *
- * @param {{nomeCompleto: string, whatsApp: string, saborId: number, pesoKg: number, dataEntrega: string, observacoes?: string}} payload
+ * GET /clientes/{numero} → { id, nome, primeiroNome, temCep, pedidos }.
+ * Lanca erro com response.status 404 se o numero nao tem cadastro.
+ */
+async function getCliente(numero) {
+  const { data } = await http.get(`/internal/whatsapp-bot/clientes/${encodeURIComponent(numero)}`);
+  return data;
+}
+
+/** POST /clientes → { sucesso: true, cliente } ou { sucesso: false, erro } */
+async function cadastrarCliente(payload) {
+  try {
+    const { data } = await http.post('/internal/whatsapp-bot/clientes', payload);
+    return { sucesso: true, cliente: data };
+  } catch (err) {
+    return erroDeNegocio(err, 'Nao foi possivel concluir o cadastro. Confira os dados.');
+  }
+}
+
+/** GET /pedidos/{id}?whatsapp= → resumo do pedido, ou null se nao for deste numero. */
+async function getPedido(id, numero) {
+  try {
+    const { data } = await http.get(`/internal/whatsapp-bot/pedidos/${id}`, { params: { whatsapp: numero } });
+    return data;
+  } catch (err) {
+    if (err.response && err.response.status === 404) return null;
+    throw err;
+  }
+}
+
+/** POST /pedidos/{id}/personalizacao */
+async function adicionarPersonalizacao(id, numero, texto) {
+  await http.post(`/internal/whatsapp-bot/pedidos/${id}/personalizacao`, { whatsApp: numero, texto });
+}
+
+/**
+ * POST /pedidos → { sucesso: true, id, valorTotal, status } ou { sucesso: false, erro }.
+ * @param {{whatsApp: string, nomeCompleto?: string, saborId: number, pesoKg: number, dataEntrega: string, observacoes?: string}} payload
  */
 async function criarPedido(payload) {
   try {
     const { data } = await http.post('/internal/whatsapp-bot/pedidos', payload);
     return { sucesso: true, ...data };
   } catch (err) {
-    if (err.response && err.response.status === 400) {
-      return { sucesso: false, erro: err.response.data && err.response.data.erro
-        ? err.response.data.erro
-        : 'Nao foi possivel criar o pedido. Verifique os dados informados.' };
-    }
-    throw err;
+    return erroDeNegocio(err, 'Nao foi possivel criar o pedido. Verifique os dados informados.');
+  }
+}
+
+/**
+ * Bairro e cidade do CEP pelo ViaCEP (servico publico). Opcional: devolve
+ * null se falhar, e o cadastro segue so com o CEP.
+ */
+async function buscarCep(cep) {
+  try {
+    const { data } = await axios.get(`https://viacep.com.br/ws/${cep}/json/`, { timeout: 4_000 });
+    if (!data || data.erro) return null;
+    return { bairro: data.bairro || null, cidade: data.localidade || null };
+  } catch {
+    return null;
   }
 }
 
 module.exports = {
   getStatus,
+  getMensagens,
   getSabores,
   getDatasDisponiveis,
+  getCliente,
+  cadastrarCliente,
+  getPedido,
+  adicionarPersonalizacao,
   criarPedido,
+  buscarCep,
 };

@@ -25,7 +25,10 @@ const {
   fetchLatestBaileysVersion,
 } = require('@whiskeysockets/baileys');
 const qrcode = require('qrcode-terminal');
-const { handleMessage } = require('./src/conversation');
+const api = require('./src/apiClient');
+const { criarConversa, numeroDoJid } = require('./src/conversation');
+
+const { handleMessage } = criarConversa(api);
 
 const AUTH_DIR = path.join(__dirname, 'auth_info');
 
@@ -90,8 +93,7 @@ async function iniciarBot() {
  * @param {import('@whiskeysockets/baileys').WAMessage} msg
  */
 async function processarMensagem(sock, msg) {
-  // Ignora mensagens enviadas pela propria loja (fromMe) e mensagens sem
-  // conteudo de texto util (ex.: figurinhas, reacoes, notificacoes de grupo).
+  // Ignora mensagens enviadas pela propria loja (fromMe).
   if (msg.key.fromMe) return;
 
   const jid = msg.key.remoteJid;
@@ -100,41 +102,48 @@ async function processarMensagem(sock, msg) {
     return;
   }
 
-  const texto = extrairTexto(msg);
-  if (texto === null) {
+  const conteudo = extrairConteudo(msg);
+  if (conteudo === null) {
     return;
   }
 
-  console.log(`[bot] Mensagem recebida de ${mascarar(jid)} (${texto.length} caracteres).`);
+  // O telefone e a identificacao do cliente (RN01). Em contas novas o
+  // WhatsApp pode mandar um identificador anonimo (@lid) no remoteJid; nesse
+  // caso o numero real vem em senderPn / remoteJidAlt.
+  const jidTelefone = [msg.key.senderPn, msg.key.remoteJidAlt, jid]
+    .find((j) => j && j.endsWith('@s.whatsapp.net')) || jid;
+  const numero = numeroDoJid(jidTelefone);
 
-  const respostas = await handleMessage(jid, texto);
+  console.log(`[bot] Mensagem (${conteudo.tipo}) de ${mascarar(numero)}.`);
+
+  const respostas = await handleMessage(numero, conteudo.texto, { tipo: conteudo.tipo });
 
   for (const resposta of respostas) {
-    await sock.sendMessage(jid, { text: resposta });
+    if (resposta) await sock.sendMessage(jid, { text: resposta });
   }
 }
 
-function extrairTexto(msg) {
+/** Texto da mensagem (ou legenda da foto) e o tipo; null para o que o bot ignora. */
+function extrairConteudo(msg) {
   const conteudo = msg.message;
   if (!conteudo) return null;
 
-  if (conteudo.conversation) return conteudo.conversation;
-  if (conteudo.extendedTextMessage?.text) return conteudo.extendedTextMessage.text;
+  if (conteudo.conversation) return { texto: conteudo.conversation, tipo: 'texto' };
+  if (conteudo.extendedTextMessage?.text) return { texto: conteudo.extendedTextMessage.text, tipo: 'texto' };
+  if (conteudo.imageMessage) return { texto: conteudo.imageMessage.caption || '', tipo: 'imagem' };
   if (conteudo.buttonsResponseMessage?.selectedDisplayText) {
-    return conteudo.buttonsResponseMessage.selectedDisplayText;
+    return { texto: conteudo.buttonsResponseMessage.selectedDisplayText, tipo: 'texto' };
   }
   if (conteudo.listResponseMessage?.title) {
-    return conteudo.listResponseMessage.title;
+    return { texto: conteudo.listResponseMessage.title, tipo: 'texto' };
   }
 
-  // Outros tipos (imagem, audio, documento, etc.) nao sao suportados pelo
-  // fluxo de texto do bot.
+  // Audio, documento, figurinha etc. ficam para a Nilda ver na conversa.
   return null;
 }
 
 /** Mascara o numero de telefone nos logs, mantendo so os ultimos 4 digitos. */
-function mascarar(jid) {
-  const numero = jid.split('@')[0];
+function mascarar(numero) {
   if (numero.length <= 4) return '****';
   return `${'*'.repeat(numero.length - 4)}${numero.slice(-4)}`;
 }
