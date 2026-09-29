@@ -38,7 +38,7 @@ else
                         @m.CriadoEm.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
                         @if (m.Pedido is not null)
                         {
-                            <span>· <a asp-page="/Admin/Pedidos/Index" asp-route-f="todos" asp-route-aberto="@m.PedidoId">pedido de @m.Pedido.Cliente.NomeCompleto</a></span>
+                            <span>· <a asp-page="/Admin/Pedidos/Index" asp-route-f="todos" asp-route-aberto="@m.PedidoId" class="btn btn-outline-secondary btn-sm py-0">pedido de @m.Pedido.Cliente.NomeCompleto</a></span>
                         }
                         @if (!string.IsNullOrWhiteSpace(m.Motivo))
                         {

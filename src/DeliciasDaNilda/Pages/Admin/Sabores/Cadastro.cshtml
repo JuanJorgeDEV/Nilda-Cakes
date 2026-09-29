@@ -85,11 +85,11 @@
                 <div class="dn-sabor-acoes">
                     <a asp-page="/Admin/Sabores/Editar" asp-route-id="@sabor.Id" class="btn btn-outline-primary btn-sm">Editar</a>
                     <form method="post" asp-page-handler="Alternar" asp-route-id="@sabor.Id">
-                        <button type="submit" class="btn btn-outline-secondary btn-sm">@(sabor.Disponivel ? "Pausar" : "Ativar")</button>
+                        <button type="submit" class="btn btn-outline-secondary btn-sm" data-confirmar="@(sabor.Disponivel ? "Pausar" : "Ativar") o sabor @sabor.Nome? @(sabor.Disponivel ? "Ele deixa de aparecer para os clientes." : "Ele volta a aparecer para os clientes.")">@(sabor.Disponivel ? "Pausar" : "Ativar")</button>
                     </form>
                     <form method="post" asp-page-handler="Excluir" asp-route-id="@sabor.Id" class="ms-auto"
                           onsubmit="return confirm('Excluir o sabor @sabor.Nome.Replace("'", "") do cardápio? Os pedidos antigos continuam com ele.');">
-                        <button type="submit" class="btn btn-link btn-sm text-danger px-1">Excluir</button>
+                        <button type="submit" class="btn btn-outline-danger btn-sm">Excluir</button>
                     </form>
                 </div>
             </div>

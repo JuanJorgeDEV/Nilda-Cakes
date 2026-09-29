@@ -76,7 +76,7 @@
         @if (Model.Ingredientes.Count == 0)
         {
             <div class="alert alert-warning">
-                Nenhum ingrediente cadastrado ainda. Cadastre em <a asp-page="/Admin/Insumos/Index">Estoque</a> antes de montar a ficha.
+                Nenhum ingrediente cadastrado ainda. Cadastre no Estoque antes de montar a ficha. <a asp-page="/Admin/Insumos/Index" class="btn btn-outline-warning btn-sm ms-1">Ir para o Estoque</a>
             </div>
         }
 

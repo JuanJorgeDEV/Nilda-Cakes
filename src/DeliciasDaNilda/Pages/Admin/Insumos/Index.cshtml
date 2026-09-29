@@ -111,7 +111,7 @@
                 <div class="dn-chips">
                     @foreach (var (valor, rotulo) in Rapidos(ing.UnidadeMedida))
                     {
-                        <button type="submit" name="rapido" value="@valor.ToString(inv)" class="dn-chip dn-chip-mais">+@rotulo</button>
+                        <button type="submit" name="rapido" value="@valor.ToString(inv)" class="dn-chip dn-chip-mais" data-confirmar="Somar +@rotulo ao estoque de @ing.Nome?">+@rotulo</button>
                     }
                 </div>
                 <div class="input-group input-group-sm mt-2">
@@ -129,14 +129,14 @@
                     {
                         <span class="input-group-text">@ing.UnidadeMedida</span>
                     }
-                    <button type="submit" class="btn btn-outline-primary">Somar</button>
+                    <button type="submit" class="btn btn-outline-primary" data-confirmar="Somar {quantidade} {unidade} ao estoque de @ing.Nome?" data-confirmar-requer="quantidade">Somar</button>
                 </div>
             </form>
 
             <div class="dn-insumo-acoes">
-                <button type="button" class="btn btn-link btn-sm px-0" data-bs-toggle="collapse" data-bs-target="#perda-@ing.Id">Registrar perda</button>
-                <button type="button" class="btn btn-link btn-sm px-0" data-bs-toggle="collapse" data-bs-target="#editar-@ing.Id">Editar</button>
-                <a asp-page="/Admin/Insumos/Historico" asp-route-id="@ing.Id" class="btn btn-link btn-sm px-0 ms-auto">Histórico</a>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#perda-@ing.Id">Registrar perda</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#editar-@ing.Id">Editar</button>
+                <a asp-page="/Admin/Insumos/Historico" asp-route-id="@ing.Id" class="btn btn-outline-secondary btn-sm ms-auto">Histórico</a>
             </div>
 
             <div class="collapse" id="perda-@ing.Id">
@@ -166,7 +166,7 @@
                         }
                     </div>
                     <input type="text" name="motivoOutro" class="form-control form-control-sm mb-2" placeholder="Descreva o motivo (se for Outro)" maxlength="200" />
-                    <button type="submit" class="btn btn-outline-danger btn-sm w-100">Registrar perda</button>
+                    <button type="submit" class="btn btn-outline-danger btn-sm w-100" data-confirmar="Registrar perda de {quantidade} {unidade} de @ing.Nome ({motivo})? O saldo vai diminuir." data-confirmar-requer="quantidade">Registrar perda</button>
                 </form>
             </div>
 

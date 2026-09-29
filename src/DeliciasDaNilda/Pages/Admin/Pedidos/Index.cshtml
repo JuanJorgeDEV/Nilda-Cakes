@@ -44,7 +44,7 @@
 {
     <div class="dn-aviso-falta mb-3">
         ⚠ @(totalFaltas == 1 ? "1 pedido a confirmar não tem" : $"{totalFaltas} pedidos a confirmar não têm") ingrediente suficiente no estoque.
-        <a asp-page="/Admin/Estoque/Alertas">Ver o que comprar</a>
+        <a asp-page="/Admin/Estoque/Alertas" class="btn btn-danger btn-sm ms-1">Ver o que comprar</a>
     </div>
 }
 

@@ -66,7 +66,7 @@
                             <li>@falta.IngredienteNome — faltam <strong>@QuantidadeFormatter.Formatar(falta.QuantidadeFaltante, falta.UnidadeMedida)</strong></li>
                         }
                     </ul>
-                    <a asp-page="/Admin/Insumos/Index">Registrar entrada de insumos</a>
+                    <a asp-page="/Admin/Insumos/Index" class="btn btn-outline-danger btn-sm">Registrar entrada de insumos</a>
                 </div>
             }
 
@@ -145,13 +145,13 @@
                             <div class="d-flex gap-2 flex-wrap">
                                 @if (pago > 0)
                                 {
-                                    <button type="submit" name="modo" value="tudo" class="btn btn-primary btn-sm">Recebi o saldo · @restante.ToString("C")</button>
+                                    <button type="submit" name="modo" value="tudo" class="btn btn-primary btn-sm" data-confirmar="Confirmar: recebeu o saldo de @restante.ToString("C") de @pedido.Cliente.NomeCompleto em {forma}?">Recebi o saldo · @restante.ToString("C")</button>
                                 }
                                 else
                                 {
-                                    <button type="submit" name="modo" value="tudo" class="btn btn-primary btn-sm">Recebi tudo · @pedido.ValorTotal.ToString("C")</button>
-                                    <button type="submit" name="modo" value="sinal50" class="btn btn-outline-primary btn-sm">Recebi sinal 50% · @sinal50.ToString("C")</button>
-                                    <button type="button" class="btn btn-link btn-sm px-1" data-bs-toggle="collapse" data-bs-target="#outro-@alvo">outro valor de sinal</button>
+                                    <button type="submit" name="modo" value="tudo" class="btn btn-primary btn-sm" data-confirmar="Confirmar: recebeu o valor total de @pedido.ValorTotal.ToString("C") de @pedido.Cliente.NomeCompleto em {forma}?">Recebi tudo · @pedido.ValorTotal.ToString("C")</button>
+                                    <button type="submit" name="modo" value="sinal50" class="btn btn-outline-primary btn-sm" data-confirmar="Confirmar: recebeu o sinal de @sinal50.ToString("C") de @pedido.Cliente.NomeCompleto em {forma}?">Recebi sinal 50% · @sinal50.ToString("C")</button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#outro-@alvo">outro valor de sinal</button>
                                 }
                             </div>
                             @if (pago == 0)
@@ -162,7 +162,7 @@
                                             <span class="input-group-text">R$</span>
                                             <input type="number" name="valorSinal" step="0.01" min="0.01" max="@pedido.ValorTotal" class="form-control" aria-label="Valor do sinal" />
                                         </div>
-                                        <button type="submit" name="modo" value="sinal" class="btn btn-outline-primary btn-sm">Registrar sinal</button>
+                                        <button type="submit" name="modo" value="sinal" class="btn btn-outline-primary btn-sm" data-confirmar="Confirmar: recebeu um sinal de R$ {valorSinal} de @pedido.Cliente.NomeCompleto em {forma}?" data-confirmar-requer="valorSinal">Registrar sinal</button>
                                     </div>
                                 </div>
                             }
@@ -187,14 +187,14 @@
                 {
                     <form method="post" asp-page="/Admin/Pedidos/Index" asp-page-handler="Confirmar" asp-route-id="@pedido.Id">
                         <input type="hidden" name="voltar" value="@Model.Voltar" />
-                        <button type="submit" class="btn btn-success btn-sm">Confirmar pedido</button>
+                        <button type="submit" class="btn btn-success btn-sm" data-confirmar="Confirmar o pedido de @pedido.Cliente.NomeCompleto? O estoque dos ingredientes será abatido.">Confirmar pedido</button>
                     </form>
                 }
                 @if (pedido.StatusPedido == StatusPedido.Confirmado)
                 {
                     <form method="post" asp-page="/Admin/Pedidos/Index" asp-page-handler="Concluir" asp-route-id="@pedido.Id">
                         <input type="hidden" name="voltar" value="@Model.Voltar" />
-                        <button type="submit" class="btn btn-success btn-sm">Marcar como entregue</button>
+                        <button type="submit" class="btn btn-success btn-sm" data-confirmar="Marcar o pedido de @pedido.Cliente.NomeCompleto como entregue?">Marcar como entregue</button>
                     </form>
                 }
                 <a href="@waLink" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm">Chamar no WhatsApp</a>

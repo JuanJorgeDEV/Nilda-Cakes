@@ -18,7 +18,7 @@
     @foreach (var aba in abas)
     {
         var ativa = Ativa(aba.Prefixo);
-        <a asp-page="@aba.Pagina" class="dn-nav-item @(ativa ? "ativa" : "")" aria-current="@(ativa ? "page" : null)">
+        <a asp-page="@aba.Pagina" class="dn-nav-item @(ativa ? "ativa" : "") @(aba.Id == "cardapio" ? "so-desktop" : "")" aria-current="@(ativa ? "page" : null)">
             <partial name="_Icone" model="aba.Id" />
             <span class="dn-nav-longo">@aba.Rotulo</span><span class="dn-nav-curto">@aba.Curto</span>
         </a>

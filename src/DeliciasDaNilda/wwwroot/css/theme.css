@@ -1180,7 +1180,8 @@ h1, h2, h3, .dn-title {
 
 .dn-etapa-titulo { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; color: var(--wine); margin-bottom: 6px; }
 .dn-etapa-sub { font-size: 13.5px; color: var(--ink-soft); }
-.dn-etapa-botoes { display: flex; gap: 8px; margin-top: 20px; position: sticky; bottom: 0; padding: 12px 0; background: linear-gradient(to top, var(--cream) 70%, transparent); }
+.dn-etapa-botoes { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; position: sticky; bottom: 0; padding: 12px 0; background: linear-gradient(to top, var(--cream) 70%, transparent); }
+.dn-etapa-linha { display: flex; gap: 8px; }
 .dn-etapa-erro { color: var(--danger); font-size: 13.5px; text-align: center; }
 
 .dn-bolos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
@@ -1285,3 +1286,23 @@ label.dn-dia:hover { background: var(--rose); color: #fff; }
 .dn-modal-envio { border-radius: 20px; border: 0; }
 .dn-modal-icone { font-size: 40px; margin-bottom: 6px; }
 .dn-personalizacao { white-space: pre-line; background: var(--gold-light); border-radius: 10px; padding: 8px 12px; }
+
+/* Ajustes: botões no lugar de links, "Outro?" no pedido, menu do celular */
+
+.btn-outline-whatsapp { border: 2px solid #25D366; color: #1A7F3F; background: #fff; font-weight: 600; }
+.btn-outline-whatsapp:hover, .btn-outline-whatsapp:focus { background: #25D366; border-color: #25D366; color: #fff; }
+
+.dn-bolo-outro { border: 2px dashed var(--rose); background: transparent; box-shadow: none; text-decoration: none; color: inherit; }
+.dn-bolo-outro:hover { color: inherit; background: #fff; }
+
+.dn-aviso-falta a:not(.btn), .dn-falta a:not(.btn) { color: var(--danger); font-weight: 600; }
+.dn-saudacao { flex-wrap: wrap; }
+.dn-saudacao > span:last-child { display: flex; gap: 6px; }
+
+@media (max-width: 768px) {
+  .dn-nav-item.so-desktop { display: none; }
+}
+
+.dn-ranking { counter-reset: posicao; }
+.dn-ranking > li { counter-increment: posicao; }
+.dn-ranking .dn-barras-topo span:first-child::before { content: counter(posicao) "º "; color: var(--ink-soft); font-weight: 400; }
