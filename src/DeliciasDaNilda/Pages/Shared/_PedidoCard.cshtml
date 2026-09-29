@@ -71,7 +71,16 @@
             }
 
             <dl class="dn-pedido-dl">
-                <div><dt>WhatsApp</dt><dd><a href="@waLink" target="_blank" rel="noopener">@pedido.Cliente.WhatsApp</a></dd></div>
+                <div><dt>WhatsApp</dt><dd><a href="@waLink" target="_blank" rel="noopener">@WhatsAppHelper.Formatar(pedido.Cliente.WhatsApp)</a></dd></div>
+                <div><dt>Região</dt><dd>@(string.IsNullOrWhiteSpace(pedido.Cliente.Bairro) ? (pedido.Cliente.Cep ?? "—") : $"{pedido.Cliente.Bairro}{(string.IsNullOrWhiteSpace(pedido.Cliente.Cidade) ? "" : $", {pedido.Cliente.Cidade}")}")</dd></div>
+                @if (pedido.EhAniversario)
+                {
+                    <div><dt>Aniversário</dt><dd>@(pedido.NomeAniversariante ?? "sim")@(pedido.IdadeAniversariante is { } idade ? $" · {idade} anos" : "")</dd></div>
+                }
+                @if (!string.IsNullOrWhiteSpace(pedido.Tema))
+                {
+                    <div><dt>Tema</dt><dd>@pedido.Tema</dd></div>
+                }
                 <div><dt>Preço por kg</dt><dd>@pedido.PrecoPorKgUtilizado.ToString("C")</dd></div>
                 <div><dt>Pedido feito em</dt><dd>@pedido.CriadoEm.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd></div>
                 <div class="dn-dl-largo">
@@ -96,6 +105,10 @@
             @if (!string.IsNullOrWhiteSpace(pedido.Observacoes))
             {
                 <p class="dn-pedido-obs"><strong>Observações:</strong> @pedido.Observacoes</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(pedido.Personalizacao))
+            {
+                <p class="dn-pedido-obs dn-personalizacao"><strong>Personalização (WhatsApp):</strong> @pedido.Personalizacao</p>
             }
 
             @if (pedido.StatusPedido != StatusPedido.Cancelado)

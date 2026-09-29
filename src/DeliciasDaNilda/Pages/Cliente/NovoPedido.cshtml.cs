@@ -1,30 +1,30 @@
 using System.ComponentModel.DataAnnotations;
-using DeliciasDaNilda.Data;
 using DeliciasDaNilda.Domain.Entities;
 using DeliciasDaNilda.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.EntityFrameworkCore;
 
 namespace DeliciasDaNilda.Pages.Cliente;
 
 /// <summary>
-/// Criação de pedido: escolha de sabor + peso (RN03), com data de entrega
-/// restrita pela antecedência mínima (RN05) e capacidade diária (RN06/RN07).
+/// Funil de pedido em etapas: bolo (foto), tamanho, data, ocasião e
+/// revisão. Preço sempre peso × preço/kg (RN03); datas respeitam a
+/// antecedência mínima (RN05) e o limite diário (RN06/RN07); o pedido nasce
+/// Pendente de Confirmação (RN08).
 /// </summary>
 public class NovoPedidoModel : PageModel
 {
     private const int DiasDeJanelaParaSelecaoDeData = 45;
 
-    private readonly AppDbContext _db;
     private readonly IPedidoService _pedidoService;
     private readonly IAgendamentoService _agendamentoService;
+    private readonly ISaborService _saborService;
 
-    public NovoPedidoModel(AppDbContext db, IPedidoService pedidoService, IAgendamentoService agendamentoService)
+    public NovoPedidoModel(IPedidoService pedidoService, IAgendamentoService agendamentoService, ISaborService saborService)
     {
-        _db = db;
         _pedidoService = pedidoService;
         _agendamentoService = agendamentoService;
+        _saborService = saborService;
     }
 
     [BindProperty]
@@ -36,22 +36,30 @@ public class NovoPedidoModel : PageModel
 
     public string? ClienteNome { get; set; }
 
+    public string? Erro { get; set; }
+
     public class EntradaModel
     {
-        [Required(ErrorMessage = "Escolha um sabor.")]
-        [Display(Name = "Sabor")]
+        [Range(1, int.MaxValue, ErrorMessage = "Escolha o bolo.")]
         public int SaborId { get; set; }
 
-        [Required(ErrorMessage = "Informe o peso desejado.")]
-        [Range(0.01, 100, ErrorMessage = "Peso deve ser maior que zero.")]
-        [Display(Name = "Peso (kg)")]
+        [Range(0.5, 20, ErrorMessage = "Escolha um tamanho entre 0,5 kg e 20 kg.")]
         public decimal PesoKg { get; set; }
 
         [Required(ErrorMessage = "Escolha a data de entrega.")]
-        [Display(Name = "Data de entrega/retirada")]
-        public DateOnly DataEntrega { get; set; }
+        public DateOnly? DataEntrega { get; set; }
 
-        [Display(Name = "Observações")]
+        public bool EhAniversario { get; set; }
+
+        [StringLength(100)]
+        public string? NomeAniversariante { get; set; }
+
+        [Range(0, 129, ErrorMessage = "Idade inválida.")]
+        public int? IdadeAniversariante { get; set; }
+
+        [StringLength(200)]
+        public string? Tema { get; set; }
+
         [StringLength(500)]
         public string? Observacoes { get; set; }
     }
@@ -60,8 +68,7 @@ public class NovoPedidoModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(CancellationToken ct)
     {
-        var clienteId = HttpContext.Session.GetInt32("ClienteId");
-        if (clienteId is null)
+        if (HttpContext.Session.GetInt32("ClienteId") is null)
         {
             return RedirectToPage("/Cliente/Identificacao");
         }
@@ -83,6 +90,8 @@ public class NovoPedidoModel : PageModel
 
         if (!ModelState.IsValid)
         {
+            Erro = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).FirstOrDefault(m => !string.IsNullOrWhiteSpace(m))
+                   ?? "Confira os dados do pedido.";
             await CarregarDadosDeApoioAsync(ct);
             return Page();
         }
@@ -92,26 +101,24 @@ public class NovoPedidoModel : PageModel
             clienteId.Value,
             Entrada.SaborId,
             Entrada.PesoKg,
-            Entrada.DataEntrega,
+            Entrada.DataEntrega!.Value,
             Entrada.Observacoes,
-            ct);
+            ct,
+            new OcasiaoPedido(Entrada.EhAniversario, Entrada.NomeAniversariante, Entrada.IdadeAniversariante, Entrada.Tema));
 
         if (!resultado.Sucesso)
         {
-            ModelState.AddModelError(string.Empty, resultado.Erro!);
+            Erro = resultado.Erro;
             await CarregarDadosDeApoioAsync(ct);
             return Page();
         }
 
-        return RedirectToPage("/Cliente/Confirmacao", new { id = resultado.Valor!.Id });
+        return RedirectToPage("/Cliente/Confirmacao", new { id = resultado.Valor!.Id, enviar = true });
     }
 
     private async Task CarregarDadosDeApoioAsync(CancellationToken ct)
     {
-        SaboresDisponiveis = await _db.Sabores
-            .Where(s => s.Disponivel && s.ExcluidoEm == null)
-            .OrderBy(s => s.Nome)
-            .ToListAsync(ct);
+        SaboresDisponiveis = await _saborService.ListarAsync(apenasDisponiveis: true, ct);
 
         // RN05: data mínima de entrega (3 dias úteis a partir de agora).
         var dataMinima = _agendamentoService.CalcularDataMinimaPermitida(DateTime.UtcNow);
@@ -119,7 +126,6 @@ public class NovoPedidoModel : PageModel
 
         // RN06/RN07: mapa de bloqueio por data (>= 3 pedidos ativos no dia).
         var bloqueios = await _agendamentoService.ObterBloqueiosNoIntervaloAsync(dataMinima, dataFinal, ct);
-
         OpcoesDeData = bloqueios
             .OrderBy(kv => kv.Key)
             .Select(kv => new OpcaoData(kv.Key, kv.Value))

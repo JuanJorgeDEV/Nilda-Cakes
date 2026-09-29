@@ -16,6 +16,11 @@ public interface IConfiguracaoService
 
     /// <summary>Liga/desliga o bot de WhatsApp (ação exclusiva do ADM pelo painel).</summary>
     Task ExibirOuAtualizarBotAtivoAsync(bool ativo, CancellationToken ct = default);
+
+    /// <summary>Número de WhatsApp da loja (normalizado) ou null se ainda não configurado.</summary>
+    Task<string?> WhatsAppLojaAsync(CancellationToken ct = default);
+
+    Task DefinirWhatsAppLojaAsync(string? numero, CancellationToken ct = default);
 }
 
 public class ConfiguracaoService : IConfiguracaoService
@@ -56,6 +61,21 @@ public class ConfiguracaoService : IConfiguracaoService
     {
         var configuracao = await ObterOuCriarSingletonAsync(ct);
         configuracao.WhatsAppBotAtivo = ativo;
+        configuracao.AtualizadoEm = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task<string?> WhatsAppLojaAsync(CancellationToken ct = default)
+    {
+        var configuracao = await ObterOuCriarSingletonAsync(ct);
+        return string.IsNullOrWhiteSpace(configuracao.WhatsAppLoja) ? null : configuracao.WhatsAppLoja;
+    }
+
+    public async Task DefinirWhatsAppLojaAsync(string? numero, CancellationToken ct = default)
+    {
+        var configuracao = await ObterOuCriarSingletonAsync(ct);
+        var normalizado = Common.WhatsAppHelper.Normalizar(numero ?? string.Empty);
+        configuracao.WhatsAppLoja = normalizado.Length == 0 ? null : normalizado;
         configuracao.AtualizadoEm = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
     }

@@ -51,6 +51,19 @@ public class PedidoConfiguration : IEntityTypeConfiguration<Pedido>
         builder.Property(p => p.Observacoes)
             .HasMaxLength(500);
 
+        builder.Property(p => p.EhAniversario)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(p => p.NomeAniversariante)
+            .HasMaxLength(100);
+
+        builder.Property(p => p.Tema)
+            .HasMaxLength(200);
+
+        builder.Property(p => p.Personalizacao)
+            .HasMaxLength(1000);
+
         builder.Property(p => p.CriadoEm)
             .IsRequired()
             .HasDefaultValueSql("GETUTCDATE()");

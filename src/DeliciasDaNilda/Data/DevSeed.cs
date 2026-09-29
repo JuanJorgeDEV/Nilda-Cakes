@@ -240,7 +240,7 @@ public static class DevSeed
 
         async Task<int> Criar(int cliente, string sabor, decimal kg, DateOnly data, string? obs = null)
         {
-            var p = Exigir(await pedidoSvc.CriarPedidoAsync(clienteIds[cliente], saborIds[sabor], kg, data, obs, ct), $"pedido {sabor} {data}");
+            var p = Exigir(await pedidoSvc.CriarPedidoAsync(clienteIds[cliente], saborIds[sabor], kg, data, obs, ct: ct), $"pedido {sabor} {data}");
             resultado.Pedidos++;
             return p.Id;
         }

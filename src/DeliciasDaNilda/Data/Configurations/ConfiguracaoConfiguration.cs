@@ -21,6 +21,10 @@ public class ConfiguracaoConfiguration : IEntityTypeConfiguration<Configuracao>
             .IsRequired()
             .HasDefaultValue(false);
 
+        builder.Property(c => c.WhatsAppLoja)
+            .HasMaxLength(20)
+            .IsUnicode(false);
+
         builder.Property(c => c.AtualizadoEm)
             .IsRequired()
             .HasDefaultValueSql("GETUTCDATE()");

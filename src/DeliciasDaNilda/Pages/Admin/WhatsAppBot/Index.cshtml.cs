@@ -1,12 +1,14 @@
 using DeliciasDaNilda.Services;
+using DeliciasDaNilda.Services.Common;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DeliciasDaNilda.Pages.Admin.WhatsAppBot;
 
 /// <summary>
 /// Liga/desliga o atendimento automático de pedidos via WhatsApp
-/// (flag WhatsAppBotAtivo, ver IConfiguracaoService). Não corresponde a
-/// uma RN numerada — é uma configuração operacional exclusiva do ADM.
+/// (flag WhatsAppBotAtivo, ver IConfiguracaoService) e define o número da
+/// loja para onde o site manda o cliente depois do pedido. Não corresponde
+/// a uma RN numerada — é uma configuração operacional exclusiva do ADM.
 /// </summary>
 public class IndexModel : AdminPageModelBase
 {
@@ -19,14 +21,37 @@ public class IndexModel : AdminPageModelBase
 
     public bool BotAtivo { get; set; }
 
+    public string? WhatsAppLoja { get; set; }
+
+    [TempData]
+    public string? MensagemSucesso { get; set; }
+
+    [TempData]
+    public string? MensagemErro { get; set; }
+
     public async Task OnGetAsync(CancellationToken ct)
     {
         BotAtivo = await _configuracaoService.BotAtivoAsync(ct);
+        WhatsAppLoja = await _configuracaoService.WhatsAppLojaAsync(ct);
     }
 
     public async Task<IActionResult> OnPostAsync(bool ativar, CancellationToken ct)
     {
         await _configuracaoService.ExibirOuAtualizarBotAtivoAsync(ativar, ct);
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostNumeroAsync(string? numero, CancellationToken ct)
+    {
+        var normalizado = WhatsAppHelper.Normalizar(numero ?? string.Empty);
+        if (normalizado.Length is > 0 and < 12)
+        {
+            MensagemErro = "Digite o número com DDD, por exemplo (16) 99999-9999.";
+            return RedirectToPage();
+        }
+
+        await _configuracaoService.DefinirWhatsAppLojaAsync(numero, ct);
+        MensagemSucesso = normalizado.Length == 0 ? "Número removido." : "Número da loja salvo.";
         return RedirectToPage();
     }
 }

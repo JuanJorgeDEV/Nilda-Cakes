@@ -1,111 +1,299 @@
 @page
+@using System.Globalization
 @model DeliciasDaNilda.Pages.Cliente.NovoPedidoModel
 @{
-    ViewData["Title"] = "Novo pedido";
+    ViewData["Title"] = "Seu pedido";
     ViewData["Shell"] = "cliente";
+    var inv = CultureInfo.InvariantCulture;
+    var cultura = new CultureInfo("pt-BR");
+    var primeiroNome = (Model.ClienteNome ?? "").Split(' ')[0];
+    var datasDisponiveis = Model.OpcoesDeData.ToDictionary(o => o.Data, o => o.Bloqueada);
+    var meses = Model.OpcoesDeData.Select(o => new DateOnly(o.Data.Year, o.Data.Month, 1)).Distinct().ToList();
+    var tamanhos = new[] { 1m, 1.5m, 2m, 3m };
+    var etapaInicial = Model.Erro is null ? 1 : 5;
 }
 
-<div class="dn-eyebrow mb-2">Novo pedido</div>
-<div class="dn-card-highlight p-4">
-    <h1 class="h4 mb-1">Novo pedido</h1>
-    <p style="color:var(--ink-soft);font-size:14px;">Olá, @Model.ClienteNome. Escolha o sabor, o peso e a data de entrega.</p>
+<div class="dn-saudacao">
+    <span>Oi, <strong>@primeiroNome</strong>! 👋</span>
+    <span>
+        <a asp-page="/Cliente/MeusPedidos">meus pedidos</a> ·
+        <a asp-page="/Cliente/Identificacao" asp-route-trocar="true">não é você?</a>
+    </span>
+</div>
 
-    <form method="post" id="form-novo-pedido">
-        <div asp-validation-summary="All" class="text-danger"></div>
+<div class="dn-progresso" aria-hidden="true"><span id="progresso-barra"></span></div>
+<p class="dn-progresso-texto" id="progresso-texto">Passo 1 de 5</p>
 
-        <div class="mb-3">
-            <label asp-for="Entrada.SaborId" class="form-label"></label>
-            <select asp-for="Entrada.SaborId" id="select-sabor" class="form-select" required>
-                <option value="">Selecione um sabor</option>
-                @foreach (var sabor in Model.SaboresDisponiveis)
-                {
-                    <option value="@sabor.Id" data-preco-kg="@sabor.PrecoPorKg.ToString(System.Globalization.CultureInfo.InvariantCulture)">
-                        @sabor.Nome — R$ @sabor.PrecoPorKg.ToString("N2") / kg
-                    </option>
-                }
-            </select>
-            <span asp-validation-for="Entrada.SaborId" class="text-danger"></span>
-        </div>
+<form method="post" id="form-pedido" novalidate>
+    @if (Model.Erro is not null)
+    {
+        <div class="alert alert-danger py-2">@Model.Erro</div>
+    }
 
-        <div class="mb-3">
-            <label asp-for="Entrada.PesoKg" class="form-label"></label>
-            <input asp-for="Entrada.PesoKg" id="input-peso" type="number" step="0.01" min="0.01" class="form-control" placeholder="Ex: 1.5" required />
-            <span asp-validation-for="Entrada.PesoKg" class="text-danger"></span>
-        </div>
-
-        <div class="mb-4 dn-valor-total-card dn-fade-in" id="valor-total-preview">
-            <div class="dn-valor-total-label">Valor total</div>
-            <div class="dn-valor-total-valor" id="valor-total-valor">R$ 0,00</div>
-            <div class="dn-valor-total-sub">peso × preço/kg</div>
-        </div>
-
-        <div class="mb-1">
-            <label asp-for="Entrada.DataEntrega" class="form-label"></label>
-            <select asp-for="Entrada.DataEntrega" class="form-select" required>
-                <option value="">Selecione uma data</option>
-                @foreach (var opcao in Model.OpcoesDeData)
-                {
-                    if (opcao.Bloqueada)
+    @* 1. Bolo *@
+    <section class="dn-etapa" data-etapa="1">
+        <h1 class="dn-etapa-titulo">Qual bolo vai ser?</h1>
+        @if (Model.SaboresDisponiveis.Count == 0)
+        {
+            <p style="color:var(--ink-soft);">No momento não há sabores disponíveis. Fale com a Nilda pelo WhatsApp.</p>
+        }
+        <div class="dn-bolos">
+            @foreach (var sabor in Model.SaboresDisponiveis)
+            {
+                <label class="dn-bolo">
+                    <input type="radio" name="Entrada.SaborId" value="@sabor.Id" class="visually-hidden"
+                           data-nome="@sabor.Nome" data-preco="@sabor.PrecoPorKg.ToString(inv)" checked="@(Model.Entrada.SaborId == sabor.Id)" />
+                    <span class="dn-bolo-foto @(string.IsNullOrWhiteSpace(sabor.ImagemUrl) ? "sem-foto" : "")"
+                          style="@(string.IsNullOrWhiteSpace(sabor.ImagemUrl) ? "" : $"background-image:url('{sabor.ImagemUrl}')")">
+                        @if (string.IsNullOrWhiteSpace(sabor.ImagemUrl))
+                        {
+                            <span>@sabor.Nome[0]</span>
+                        }
+                    </span>
+                    <span class="dn-bolo-nome">@sabor.Nome</span>
+                    @if (!string.IsNullOrWhiteSpace(sabor.Descricao))
                     {
-                        <option value="@opcao.Data.ToString("yyyy-MM-dd")" disabled>
-                            @opcao.Data.ToString("dd/MM/yyyy (ddd)") — indisponível (agenda lotada)
-                        </option>
+                        <span class="dn-bolo-desc">@sabor.Descricao</span>
                     }
-                    else
+                    <span class="dn-bolo-preco">@sabor.PrecoPorKg.ToString("C") o kg</span>
+                </label>
+            }
+        </div>
+    </section>
+
+    @* 2. Tamanho *@
+    <section class="dn-etapa" data-etapa="2" hidden>
+        <h1 class="dn-etapa-titulo">Pra quantas pessoas?</h1>
+        <p class="dn-etapa-sub">O bolo é vendido por peso. Cada kg serve umas 10 fatias.</p>
+        <div class="dn-tamanhos">
+            @foreach (var kg in tamanhos)
+            {
+                var id = $"kg-{kg.ToString(inv).Replace('.', '-')}";
+                <input type="radio" class="btn-check" name="tamanho" id="@id" value="@kg.ToString(inv)" checked="@(Model.Entrada.PesoKg == kg)" />
+                <label class="dn-tamanho" for="@id">
+                    <strong>@kg.ToString("0.#", cultura) kg</strong>
+                    <span>~@((int)(kg * 10)) pessoas</span>
+                </label>
+            }
+            <input type="radio" class="btn-check" name="tamanho" id="kg-outro" value="outro" checked="@(Model.Entrada.PesoKg > 0 && !tamanhos.Contains(Model.Entrada.PesoKg))" />
+            <label class="dn-tamanho" for="kg-outro"><strong>Outro</strong><span>escolher peso</span></label>
+        </div>
+        <div id="peso-outro" class="mt-3" hidden>
+            <label for="peso-livre" class="form-label">Peso em kg</label>
+            <input id="peso-livre" type="number" step="0.5" min="0.5" max="20" class="form-control" style="max-width:140px;" placeholder="ex: 2,5"
+                   value="@(Model.Entrada.PesoKg > 0 && !tamanhos.Contains(Model.Entrada.PesoKg) ? Model.Entrada.PesoKg.ToString(inv) : "")" />
+        </div>
+        <input type="hidden" name="Entrada.PesoKg" id="peso-final" value="@(Model.Entrada.PesoKg > 0 ? Model.Entrada.PesoKg.ToString(inv) : "")" />
+    </section>
+
+    @* 3. Data *@
+    <section class="dn-etapa" data-etapa="3" hidden>
+        <h1 class="dn-etapa-titulo">Pra quando?</h1>
+        <p class="dn-etapa-sub">Encomendas com pelo menos 3 dias úteis de antecedência. Dias riscados já estão com a agenda cheia.</p>
+        @foreach (var mes in meses)
+        {
+            var offset = (int)mes.DayOfWeek;
+            var diasNoMes = DateTime.DaysInMonth(mes.Year, mes.Month);
+            <div class="dn-mes">
+                <div class="dn-mes-titulo">@(char.ToUpper(mes.ToString("MMMM", cultura)[0]) + mes.ToString("MMMM 'de' yyyy", cultura)[1..])</div>
+                <div class="dn-mes-grade">
+                    @foreach (var d in new[] { "D", "S", "T", "Q", "Q", "S", "S" })
                     {
-                        <option value="@opcao.Data.ToString("yyyy-MM-dd")">
-                            @opcao.Data.ToString("dd/MM/yyyy (ddd)")
-                        </option>
+                        <span class="dn-mes-sem">@d</span>
                     }
-                }
-            </select>
-            <span asp-validation-for="Entrada.DataEntrega" class="text-danger"></span>
-            <div class="form-text mb-3" style="color:var(--ink-soft);">
-                Só aparecem datas com pelo menos 3 dias úteis de antecedência. Datas já lotadas
-                (3 bolos) ficam marcadas como indisponíveis.
+                    @for (var i = 0; i < offset; i++)
+                    {
+                        <span></span>
+                    }
+                    @for (var dia = 1; dia <= diasNoMes; dia++)
+                    {
+                        var data = new DateOnly(mes.Year, mes.Month, dia);
+                        var existe = datasDisponiveis.TryGetValue(data, out var bloqueada);
+                        if (existe && !bloqueada)
+                        {
+                            var id = $"data-{data:yyyyMMdd}";
+                            <input type="radio" class="btn-check" name="Entrada.DataEntrega" id="@id" value="@data.ToString("yyyy-MM-dd")"
+                                   data-texto="@data.ToString("dddd, d 'de' MMMM", cultura)" checked="@(Model.Entrada.DataEntrega == data)" />
+                            <label class="dn-dia" for="@id">@dia</label>
+                        }
+                        else
+                        {
+                            <span class="dn-dia @(existe ? "cheio" : "fora")" title="@(existe ? "Agenda cheia" : "")">@dia</span>
+                        }
+                    }
+                </div>
+            </div>
+        }
+    </section>
+
+    @* 4. Ocasião *@
+    <section class="dn-etapa" data-etapa="4" hidden>
+        <h1 class="dn-etapa-titulo">É pra alguma comemoração?</h1>
+        <div class="dn-sim-nao mb-3">
+            <input type="radio" class="btn-check" name="Entrada.EhAniversario" id="aniv-sim" value="true" checked="@Model.Entrada.EhAniversario" />
+            <label class="dn-tamanho" for="aniv-sim"><strong>🎉 Aniversário</strong></label>
+            <input type="radio" class="btn-check" name="Entrada.EhAniversario" id="aniv-nao" value="false" checked="@(!Model.Entrada.EhAniversario)" />
+            <label class="dn-tamanho" for="aniv-nao"><strong>Outra ocasião</strong></label>
+        </div>
+
+        <div id="campos-aniversario" @(Model.Entrada.EhAniversario ? "" : "hidden")>
+            <div class="row g-2 mb-3">
+                <div class="col-8">
+                    <label for="aniv-nome" class="form-label">Nome do aniversariante</label>
+                    <input id="aniv-nome" name="Entrada.NomeAniversariante" value="@Model.Entrada.NomeAniversariante" class="form-control" maxlength="100" placeholder="ex: Laura" />
+                </div>
+                <div class="col-4">
+                    <label for="aniv-idade" class="form-label">Idade</label>
+                    <input id="aniv-idade" name="Entrada.IdadeAniversariante" value="@Model.Entrada.IdadeAniversariante" type="number" min="0" max="129" class="form-control" placeholder="opcional" />
+                </div>
             </div>
         </div>
 
-        <div class="mb-3">
-            <label asp-for="Entrada.Observacoes" class="form-label"></label>
-            <textarea asp-for="Entrada.Observacoes" class="form-control" rows="3" placeholder="Alguma mensagem no bolo, decoração especial..."></textarea>
-            <span asp-validation-for="Entrada.Observacoes" class="text-danger"></span>
-        </div>
+        <label for="tema" class="form-label">Tema ou cores <span class="small text-muted">(opcional)</span></label>
+        <input id="tema" name="Entrada.Tema" value="@Model.Entrada.Tema" class="form-control mb-3" maxlength="200" placeholder="ex: unicórnio, tons de rosa e dourado" />
 
-        <div class="dn-notice-rose mb-4">
-            Seu pedido ficará como <strong>Pendente de Confirmação</strong>. O horário de retirada é
-            combinado depois, pelo WhatsApp.
-        </div>
+        <label for="obs" class="form-label">Algo mais? <span class="small text-muted">(opcional)</span></label>
+        <textarea id="obs" name="Entrada.Observacoes" class="form-control" rows="2" maxlength="500" placeholder="frase no bolo, restrição alimentar...">@Model.Entrada.Observacoes</textarea>
+        <p class="small mt-2 mb-0" style="color:var(--ink-soft);">Tem uma foto de referência? Você manda no WhatsApp no próximo passo.</p>
+    </section>
 
-        <button type="submit" class="btn btn-primary w-100 btn-lg">Confirmar pedido</button>
-    </form>
-</div>
+    @* 5. Revisão *@
+    <section class="dn-etapa" data-etapa="5" hidden>
+        <h1 class="dn-etapa-titulo">Confere se está tudo certo</h1>
+        <dl class="dn-resumo-pedido">
+            <div><dt>Bolo</dt><dd id="r-bolo">—</dd></div>
+            <div><dt>Tamanho</dt><dd id="r-tamanho">—</dd></div>
+            <div><dt>Entrega</dt><dd id="r-data">—</dd></div>
+            <div id="r-ocasiao-linha" hidden><dt>Ocasião</dt><dd id="r-ocasiao">—</dd></div>
+            <div id="r-tema-linha" hidden><dt>Tema</dt><dd id="r-tema">—</dd></div>
+            <div id="r-obs-linha" hidden><dt>Observações</dt><dd id="r-obs">—</dd></div>
+        </dl>
+        <p class="dn-resumo-valor">Valor: <span id="r-valor">—</span> <small id="r-conta"></small></p>
+        <p class="small" style="color:var(--ink-soft);">
+            Depois de confirmar, você manda o pedido pro WhatsApp da Nilda. Ela confirma a encomenda e
+            combina o horário de retirada com você por lá.
+        </p>
+    </section>
+
+    <div class="dn-etapa-botoes">
+        <button type="button" class="btn btn-outline-secondary" id="btn-voltar" hidden>Voltar</button>
+        <button type="button" class="btn btn-primary flex-grow-1" id="btn-avancar">Continuar</button>
+        <button type="submit" class="btn btn-primary flex-grow-1" id="btn-confirmar" hidden>Confirmar pedido</button>
+    </div>
+    <p class="dn-etapa-erro" id="etapa-erro" role="alert" hidden></p>
+</form>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
     <script>
-        // Cálculo de preço em tempo real: Valor Total = Peso x Preço/kg (RN03).
         (function () {
-            var selectSabor = document.getElementById('select-sabor');
-            var inputPeso = document.getElementById('input-peso');
-            var valor = document.getElementById('valor-total-valor');
+            var form = document.getElementById('form-pedido');
+            var etapas = form.querySelectorAll('.dn-etapa');
+            var total = etapas.length;
+            var atual = @etapaInicial;
+            var moeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+            var numero = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 });
+            var erro = document.getElementById('etapa-erro');
 
-            function atualizarPreview() {
-                var opcao = selectSabor.options[selectSabor.selectedIndex];
-                var precoKg = opcao ? parseFloat(opcao.getAttribute('data-preco-kg')) : NaN;
-                var peso = parseFloat(inputPeso.value);
+            function sel(nome) { return form.querySelector('input[name="' + nome + '"]:checked'); }
 
-                if (!isNaN(precoKg) && !isNaN(peso) && peso > 0) {
-                    var total = precoKg * peso;
-                    valor.textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
-                } else {
-                    valor.textContent = 'R$ 0,00';
+            function peso() {
+                var t = sel('tamanho');
+                if (!t) return 0;
+                if (t.value === 'outro') return parseFloat(document.getElementById('peso-livre').value.replace(',', '.')) || 0;
+                return parseFloat(t.value);
+            }
+
+            function validar(n) {
+                if (n === 1 && !sel('Entrada.SaborId')) return 'Escolha um bolo.';
+                if (n === 2) {
+                    var p = peso();
+                    if (!(p >= 0.5 && p <= 20)) return 'Escolha o tamanho (de 0,5 a 20 kg).';
+                }
+                if (n === 3 && !sel('Entrada.DataEntrega')) return 'Escolha a data de entrega.';
+                if (n === 4) {
+                    var aniv = sel('Entrada.EhAniversario');
+                    if (aniv && aniv.value === 'true' && !document.getElementById('aniv-nome').value.trim()) return 'Diga o nome do aniversariante.';
+                }
+                return null;
+            }
+
+            function resumo() {
+                var bolo = sel('Entrada.SaborId'), data = sel('Entrada.DataEntrega'), p = peso();
+                document.getElementById('peso-final').value = p ? String(p) : '';
+                document.getElementById('r-bolo').textContent = bolo ? bolo.dataset.nome : '—';
+                document.getElementById('r-tamanho').textContent = p ? numero.format(p) + ' kg (~' + Math.round(p * 10) + ' pessoas)' : '—';
+                document.getElementById('r-data').textContent = data ? data.dataset.texto : '—';
+                var aniv = sel('Entrada.EhAniversario');
+                var ehAniv = aniv && aniv.value === 'true';
+                var nome = document.getElementById('aniv-nome').value.trim();
+                var idade = document.getElementById('aniv-idade').value.trim();
+                document.getElementById('r-ocasiao-linha').hidden = !ehAniv;
+                document.getElementById('r-ocasiao').textContent = 'Aniversário de ' + nome + (idade ? ' (' + idade + ' anos)' : '');
+                var tema = document.getElementById('tema').value.trim();
+                document.getElementById('r-tema-linha').hidden = !tema;
+                document.getElementById('r-tema').textContent = tema;
+                var obs = document.getElementById('obs').value.trim();
+                document.getElementById('r-obs-linha').hidden = !obs;
+                document.getElementById('r-obs').textContent = obs;
+                if (bolo && p) {
+                    var preco = parseFloat(bolo.dataset.preco);
+                    // RN03: peso × preço por kg — só exibição; o servidor recalcula.
+                    document.getElementById('r-valor').textContent = moeda.format(Math.round(p * preco * 100) / 100);
+                    document.getElementById('r-conta').textContent = '(' + numero.format(p) + ' kg × ' + moeda.format(preco) + ')';
                 }
             }
 
-            selectSabor.addEventListener('change', atualizarPreview);
-            inputPeso.addEventListener('input', atualizarPreview);
-            atualizarPreview();
+            function mostrar(n) {
+                atual = n;
+                etapas.forEach(function (e) { e.hidden = Number(e.dataset.etapa) !== n; });
+                document.getElementById('btn-voltar').hidden = n === 1;
+                document.getElementById('btn-avancar').hidden = n === total;
+                document.getElementById('btn-confirmar').hidden = n !== total;
+                document.getElementById('progresso-barra').style.width = (n / total * 100) + '%';
+                document.getElementById('progresso-texto').textContent = 'Passo ' + n + ' de ' + total;
+                erro.hidden = true;
+                if (n === total) resumo();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            document.getElementById('btn-avancar').addEventListener('click', function () {
+                var msg = validar(atual);
+                if (msg) { erro.textContent = msg; erro.hidden = false; return; }
+                mostrar(atual + 1);
+            });
+            document.getElementById('btn-voltar').addEventListener('click', function () { mostrar(atual - 1); });
+
+            // Escolher o bolo já avança, como num app.
+            form.querySelectorAll('input[name="Entrada.SaborId"]').forEach(function (r) {
+                r.addEventListener('change', function () { setTimeout(function () { mostrar(2); }, 180); });
+            });
+
+            form.querySelectorAll('input[name="tamanho"]').forEach(function (r) {
+                r.addEventListener('change', function () {
+                    var outro = r.value === 'outro';
+                    document.getElementById('peso-outro').hidden = !outro;
+                    if (outro) document.getElementById('peso-livre').focus();
+                });
+            });
+            if (sel('tamanho') && sel('tamanho').value === 'outro') document.getElementById('peso-outro').hidden = false;
+
+            form.querySelectorAll('input[name="Entrada.EhAniversario"]').forEach(function (r) {
+                r.addEventListener('change', function () {
+                    document.getElementById('campos-aniversario').hidden = r.value !== 'true';
+                });
+            });
+
+            form.addEventListener('submit', function (e) {
+                resumo();
+                for (var i = 1; i < total; i++) {
+                    var msg = validar(i);
+                    if (msg) { e.preventDefault(); mostrar(i); erro.textContent = msg; erro.hidden = false; return; }
+                }
+                document.getElementById('btn-confirmar').disabled = true;
+                document.getElementById('btn-confirmar').textContent = 'Enviando...';
+            });
+
+            mostrar(atual);
         })();
     </script>
 }

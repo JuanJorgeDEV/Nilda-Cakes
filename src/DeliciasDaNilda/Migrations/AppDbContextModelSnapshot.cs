@@ -74,6 +74,19 @@ namespace DeliciasDaNilda.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Bairro")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Cep")
+                        .HasMaxLength(8)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(8)");
+
+                    b.Property<string>("Cidade")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<DateTime>("CriadoEm")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2")
@@ -116,6 +129,11 @@ namespace DeliciasDaNilda.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
+
+                    b.Property<string>("WhatsAppLoja")
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
 
                     b.HasKey("Id");
 
@@ -380,12 +398,28 @@ namespace DeliciasDaNilda.Migrations
                     b.Property<DateOnly>("DataEntrega")
                         .HasColumnType("date");
 
+                    b.Property<bool>("EhAniversario")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<TimeOnly?>("HorarioRetirada")
                         .HasColumnType("time");
+
+                    b.Property<int?>("IdadeAniversariante")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NomeAniversariante")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Observacoes")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Personalizacao")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<decimal>("Peso")
                         .HasPrecision(6, 3)
@@ -411,6 +445,10 @@ namespace DeliciasDaNilda.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)")
                         .HasDefaultValue("PendenteConfirmacao");
+
+                    b.Property<string>("Tema")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<decimal>("ValorTotal")
                         .HasPrecision(10, 2)

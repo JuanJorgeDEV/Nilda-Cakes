@@ -1,78 +1,101 @@
-using System.ComponentModel.DataAnnotations;
-using DeliciasDaNilda.Data;
-using DeliciasDaNilda.Domain.Entities;
+using DeliciasDaNilda.Services;
 using DeliciasDaNilda.Services.Common;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.EntityFrameworkCore;
 
 namespace DeliciasDaNilda.Pages.Cliente;
 
 /// <summary>
-/// RN01 — identificação simplificada do cliente (nome completo + WhatsApp,
-/// sem senha). O WhatsApp normalizado (só dígitos) é a chave única do
-/// cliente: se já existir, reaproveita o cadastro; senão, cria um novo.
+/// RN01 — identificação simplificada, sem senha, pelo número de WhatsApp.
+/// Número já cadastrado entra direto; número novo faz o primeiro cadastro
+/// com nome e CEP (para a Nilda saber a região de entrega).
 /// </summary>
 public class IdentificacaoModel : PageModel
 {
-    private readonly AppDbContext _db;
+    private readonly IClienteService _clienteService;
 
-    public IdentificacaoModel(AppDbContext db)
+    public IdentificacaoModel(IClienteService clienteService)
     {
-        _db = db;
+        _clienteService = clienteService;
     }
 
     [BindProperty]
-    public EntradaModel Entrada { get; set; } = new();
+    public string WhatsApp { get; set; } = string.Empty;
 
-    public class EntradaModel
+    [BindProperty]
+    public string? Nome { get; set; }
+
+    [BindProperty]
+    public string? Cep { get; set; }
+
+    [BindProperty]
+    public string? Bairro { get; set; }
+
+    [BindProperty]
+    public string? Cidade { get; set; }
+
+    /// <summary>"numero" (1ª etapa) ou "cadastro" (número novo ou sem CEP).</summary>
+    public string Etapa { get; set; } = "numero";
+
+    /// <summary>Número já conhecido, só faltando o CEP: o nome não é pedido de novo.</summary>
+    public bool CompletandoCadastro { get; set; }
+
+    public string? Erro { get; set; }
+
+    public IActionResult OnGet(bool trocar = false)
     {
-        [Required(ErrorMessage = "Informe seu nome completo.")]
-        [Display(Name = "Nome completo")]
-        public string NomeCompleto { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "Informe seu WhatsApp.")]
-        [Display(Name = "WhatsApp")]
-        public string WhatsApp { get; set; } = string.Empty;
-    }
-
-    public void OnGet()
-    {
-    }
-
-    public async Task<IActionResult> OnPostAsync(CancellationToken ct)
-    {
-        if (!ModelState.IsValid)
+        if (trocar)
         {
+            HttpContext.Session.Remove("ClienteId");
+            HttpContext.Session.Remove("ClienteNome");
             return Page();
         }
 
-        // RN01: WhatsApp é a chave única — normaliza para só dígitos antes de comparar/gravar.
-        var whatsAppNormalizado = WhatsAppHelper.Normalizar(Entrada.WhatsApp);
+        return HttpContext.Session.GetInt32("ClienteId") is not null
+            ? RedirectToPage("/Cliente/NovoPedido")
+            : Page();
+    }
 
-        if (string.IsNullOrWhiteSpace(whatsAppNormalizado))
+    public async Task<IActionResult> OnPostNumeroAsync(CancellationToken ct)
+    {
+        if (WhatsAppHelper.Normalizar(WhatsApp).Length < 12)
         {
-            ModelState.AddModelError(string.Empty, "WhatsApp inválido.");
+            Erro = "Digite o WhatsApp com DDD, por exemplo (16) 99999-9999.";
             return Page();
         }
 
-        var cliente = await _db.Clientes.FirstOrDefaultAsync(c => c.WhatsApp == whatsAppNormalizado, ct);
-
-        if (cliente is null)
+        var cliente = await _clienteService.ObterPorWhatsAppAsync(WhatsApp, ct);
+        if (cliente is not null && !string.IsNullOrWhiteSpace(cliente.Cep))
         {
-            cliente = new Domain.Entities.Cliente
-            {
-                NomeCompleto = Entrada.NomeCompleto.Trim(),
-                WhatsApp = whatsAppNormalizado,
-                CriadoEm = DateTime.UtcNow
-            };
-            _db.Clientes.Add(cliente);
-            await _db.SaveChangesAsync(ct);
+            return Entrar(cliente);
         }
 
+        Etapa = "cadastro";
+        CompletandoCadastro = cliente is not null;
+        Nome = cliente?.NomeCompleto;
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostCadastroAsync(CancellationToken ct)
+    {
+        var resultado = await _clienteService.CadastrarAsync(
+            new DadosCadastroCliente(Nome ?? string.Empty, WhatsApp, Cep, Bairro, Cidade), ct);
+
+        if (!resultado.Sucesso)
+        {
+            Erro = resultado.Erro;
+            Etapa = "cadastro";
+            CompletandoCadastro = (await _clienteService.ObterPorWhatsAppAsync(WhatsApp, ct)) is not null;
+            return Page();
+        }
+
+        return Entrar(resultado.Valor!);
+    }
+
+    private IActionResult Entrar(Domain.Entities.Cliente cliente)
+    {
         HttpContext.Session.SetInt32("ClienteId", cliente.Id);
         HttpContext.Session.SetString("ClienteNome", cliente.NomeCompleto);
-
         return RedirectToPage("/Cliente/NovoPedido");
     }
 }

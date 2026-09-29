@@ -1164,3 +1164,124 @@ h1, h2, h3, .dn-title {
   .dn-kpi-valor { font-size: 18px; }
   .dn-grafico-area { height: 230px; }
 }
+
+/* Cliente: identificação, funil de pedido e acompanhamento ------------------*/
+
+.dn-saudacao { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 14px; margin-bottom: 12px; }
+.dn-saudacao a { font-size: 12.5px; }
+
+.dn-numero-confirmado { display: flex; justify-content: space-between; background: var(--cream); border-radius: 10px; padding: 8px 12px; font-size: 13.5px; }
+.dn-cep-resultado { font-size: 13px; color: var(--ok); }
+.dn-cep-resultado.erro { color: var(--danger); }
+
+.dn-progresso { height: 5px; background: var(--cream-2); border-radius: 999px; overflow: hidden; }
+.dn-progresso span { display: block; height: 100%; width: 20%; background: var(--wine); border-radius: 999px; transition: width .3s; }
+.dn-progresso-texto { font-size: 12px; color: var(--ink-soft); margin: 6px 0 14px; }
+
+.dn-etapa-titulo { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; color: var(--wine); margin-bottom: 6px; }
+.dn-etapa-sub { font-size: 13.5px; color: var(--ink-soft); }
+.dn-etapa-botoes { display: flex; gap: 8px; margin-top: 20px; position: sticky; bottom: 0; padding: 12px 0; background: linear-gradient(to top, var(--cream) 70%, transparent); }
+.dn-etapa-erro { color: var(--danger); font-size: 13.5px; text-align: center; }
+
+.dn-bolos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+.dn-bolo {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(90, 20, 40, 0.07);
+  transition: transform .15s, border-color .15s;
+}
+.dn-bolo:hover { transform: translateY(-2px); }
+.dn-bolo:has(input:checked) { border-color: var(--wine); }
+.dn-bolo:has(input:focus-visible) { outline: 2px solid var(--rose); outline-offset: 2px; }
+.dn-bolo-foto {
+  aspect-ratio: 1;
+  background: var(--rose-light) center / cover no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dn-bolo-foto.sem-foto { background: linear-gradient(135deg, var(--rose-light), var(--cream-2)); }
+.dn-bolo-foto span { font-family: 'Yellowtail', cursive; font-size: 56px; color: var(--wine); opacity: .45; }
+.dn-bolo-nome { font-weight: 600; font-size: 14px; padding: 8px 10px 0; line-height: 1.25; }
+.dn-bolo-desc { font-size: 11.5px; color: var(--ink-soft); padding: 2px 10px 0; line-height: 1.3; }
+.dn-bolo-preco { font-size: 11.5px; color: var(--ink-soft); padding: 4px 10px 10px; margin-top: auto; }
+
+.dn-tamanhos, .dn-sim-nao { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.dn-tamanho {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 14px 8px;
+  background: #fff;
+  border: 2px solid var(--cream-2);
+  border-radius: 14px;
+  cursor: pointer;
+  text-align: center;
+}
+.dn-tamanho strong { font-size: 17px; color: var(--ink); }
+.dn-tamanho span { font-size: 12.5px; color: var(--ink-soft); }
+.btn-check:checked + .dn-tamanho { border-color: var(--wine); background: var(--rose-light); }
+.btn-check:focus-visible + .dn-tamanho { outline: 2px solid var(--rose); outline-offset: 2px; }
+
+.dn-mes { background: #fff; border-radius: 16px; padding: 12px; margin-top: 12px; box-shadow: 0 6px 18px rgba(90, 20, 40, 0.06); }
+.dn-mes-titulo { font-weight: 600; text-align: center; margin-bottom: 8px; }
+.dn-mes-grade { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+.dn-mes-sem { font-size: 11px; color: var(--ink-soft); padding: 2px 0; }
+.dn-dia {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  font-size: 14px;
+  margin: 0;
+}
+label.dn-dia { cursor: pointer; font-weight: 600; color: var(--wine); background: var(--rose-light); }
+label.dn-dia:hover { background: var(--rose); color: #fff; }
+.btn-check:checked + .dn-dia { background: var(--wine); color: #fff; }
+.dn-dia.fora { color: #CFC2BD; }
+.dn-dia.cheio { color: #B9A9A4; text-decoration: line-through; }
+
+.dn-resumo-pedido { background: #fff; border-radius: 16px; padding: 4px 16px; margin: 12px 0; }
+.dn-resumo-pedido > div { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--cream-2); }
+.dn-resumo-pedido > div:last-child { border-bottom: 0; }
+.dn-resumo-pedido dt { font-weight: 400; color: var(--ink-soft); font-size: 13.5px; }
+.dn-resumo-pedido dd { margin: 0; text-align: right; font-size: 14px; font-weight: 500; }
+.dn-resumo-valor { font-size: 14px; color: var(--ink); }
+.dn-resumo-valor small { color: var(--ink-soft); }
+
+.dn-linha-tempo { list-style: none; display: flex; padding: 0; margin: 16px 0; counter-reset: passo; }
+.dn-linha-tempo li { flex: 1; text-align: center; font-size: 12px; color: var(--ink-soft); position: relative; padding-top: 30px; }
+.dn-linha-tempo li::before {
+  counter-increment: passo;
+  content: counter(passo);
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--cream-2);
+  color: var(--ink-soft);
+  font-weight: 600;
+  line-height: 24px;
+  z-index: 1;
+}
+.dn-linha-tempo li + li::after { content: ""; position: absolute; top: 11px; right: 50%; width: 100%; height: 2px; background: var(--cream-2); }
+.dn-linha-tempo li.feito::before { content: "✓"; background: var(--ok); color: #fff; }
+.dn-linha-tempo li.feito, .dn-linha-tempo li.atual { color: var(--ink); font-weight: 600; }
+.dn-linha-tempo li.feito::after { background: var(--ok); }
+.dn-linha-tempo li.atual::before { background: var(--wine); color: #fff; }
+
+.btn-whatsapp { background: #25D366; border-color: #25D366; color: #fff; font-weight: 600; }
+.btn-whatsapp:hover, .btn-whatsapp:focus { background: #1DA851; border-color: #1DA851; color: #fff; }
+.dn-modal-envio { border-radius: 20px; border: 0; }
+.dn-modal-icone { font-size: 40px; margin-bottom: 6px; }
+.dn-personalizacao { white-space: pre-line; background: var(--gold-light); border-radius: 10px; padding: 8px 12px; }

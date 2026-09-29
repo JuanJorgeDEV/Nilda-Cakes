@@ -19,7 +19,8 @@ public interface IPedidoService
         decimal pesoKg,
         DateOnly dataEntrega,
         string? observacoes = null,
-        CancellationToken ct = default);
+        CancellationToken ct = default,
+        OcasiaoPedido? ocasiao = null);
 
     /// <summary>
     /// RN08 — confirmação exclusiva do ADM: transição
@@ -45,13 +46,24 @@ public interface IPedidoService
 
     /// <summary>Define o horário de retirada combinado com o cliente (RN08).</summary>
     Task<ResultadoOperacao> DefinirHorarioAsync(int pedidoId, TimeOnly? horario, CancellationToken ct = default);
+
+    /// <summary>
+    /// Guarda a personalização/referência que a cliente mandou depois do
+    /// pedido (bot do WhatsApp). Acrescenta ao que já existia.
+    /// </summary>
+    Task<ResultadoOperacao> AdicionarPersonalizacaoAsync(int pedidoId, string texto, CancellationToken ct = default);
 }
+
+/// <summary>Detalhes da ocasião informados no funil do pedido (não afetam preço nem agenda).</summary>
+public record OcasiaoPedido(bool EhAniversario, string? NomeAniversariante = null, int? IdadeAniversariante = null, string? Tema = null);
 
 /// <summary>
 /// Orquestra o ciclo de vida do pedido (RN03, RN05-RN09, RN12).
 /// </summary>
 public class PedidoService : IPedidoService
 {
+    private static string? Limpar(string? texto) => string.IsNullOrWhiteSpace(texto) ? null : texto.Trim();
+
     private readonly AppDbContext _db;
     private readonly IPrecificacaoService _precificacaoService;
     private readonly IAgendamentoService _agendamentoService;
@@ -75,7 +87,8 @@ public class PedidoService : IPedidoService
         decimal pesoKg,
         DateOnly dataEntrega,
         string? observacoes = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        OcasiaoPedido? ocasiao = null)
     {
         if (pesoKg <= 0)
         {
@@ -120,7 +133,11 @@ public class PedidoService : IPedidoService
             // RN08: todo pedido novo entra como Pendente de Confirmação — nunca outro status.
             StatusPedido = StatusPedido.PendenteConfirmacao,
             StatusPagamento = StatusPagamento.SemPagamento,
-            Observacoes = observacoes,
+            Observacoes = Limpar(observacoes),
+            EhAniversario = ocasiao?.EhAniversario ?? false,
+            NomeAniversariante = ocasiao is { EhAniversario: true } ? Limpar(ocasiao.NomeAniversariante) : null,
+            IdadeAniversariante = ocasiao is { EhAniversario: true, IdadeAniversariante: > 0 and < 130 } ? ocasiao.IdadeAniversariante : null,
+            Tema = Limpar(ocasiao?.Tema),
             CriadoEm = DateTime.UtcNow
         };
 
@@ -253,6 +270,26 @@ public class PedidoService : IPedidoService
         }
 
         pedido.HorarioRetirada = horario;
+        await _db.SaveChangesAsync(ct);
+        return ResultadoOperacao.Ok();
+    }
+
+    public async Task<ResultadoOperacao> AdicionarPersonalizacaoAsync(int pedidoId, string texto, CancellationToken ct = default)
+    {
+        var limpo = Limpar(texto);
+        if (limpo is null)
+        {
+            return ResultadoOperacao.Falha("Mensagem vazia.");
+        }
+
+        var pedido = await _db.Pedidos.FirstOrDefaultAsync(p => p.Id == pedidoId, ct);
+        if (pedido is null)
+        {
+            return ResultadoOperacao.Falha("Pedido não encontrado.");
+        }
+
+        var novo = pedido.Personalizacao is null ? limpo : $"{pedido.Personalizacao}\n{limpo}";
+        pedido.Personalizacao = novo.Length > 1000 ? novo[..1000] : novo;
         await _db.SaveChangesAsync(ct);
         return ResultadoOperacao.Ok();
     }

@@ -1,36 +1,119 @@
 @page
 @model DeliciasDaNilda.Pages.Cliente.IdentificacaoModel
 @{
-    ViewData["Title"] = "Identificação";
+    ViewData["Title"] = "Fazer pedido";
     ViewData["Shell"] = "cliente";
+    var cadastro = Model.Etapa == "cadastro";
 }
 
-<div class="dn-eyebrow mb-2">Identificação</div>
 <div class="dn-card-highlight p-4">
-    <h1 class="h4 mb-2">Seja bem-vinda(o)!</h1>
-    <p style="color:var(--ink-soft);font-size:14px;">
-        Pra fazer seu pedido, só precisamos do seu nome e do seu WhatsApp — sem senha, sem complicação.
-    </p>
+    @if (!cadastro)
+    {
+        <h1 class="h4 mb-2">Vamos fazer seu bolo?</h1>
+        <p style="color:var(--ink-soft);font-size:14px;">
+            Digite seu WhatsApp. Se você já pediu com a gente, a gente te reconhece — sem senha.
+        </p>
 
-    <form method="post">
-        <div asp-validation-summary="All" class="text-danger"></div>
+        <form method="post" asp-page-handler="Numero">
+            @if (Model.Erro is not null)
+            {
+                <div class="alert alert-danger py-2">@Model.Erro</div>
+            }
+            <label for="whatsapp" class="form-label">Seu WhatsApp</label>
+            <input id="whatsapp" name="WhatsApp" value="@Model.WhatsApp" type="tel" inputmode="tel" autocomplete="tel"
+                   class="form-control form-control-lg mb-4 dn-mascara-tel" placeholder="(16) 99999-9999" required autofocus />
+            <button type="submit" class="btn btn-primary w-100 btn-lg">Continuar</button>
+        </form>
+    }
+    else
+    {
+        <h1 class="h4 mb-2">@(Model.CompletandoCadastro ? $"Oi, {Model.Nome?.Split(' ')[0]}!" : "Prazer! É seu primeiro pedido")</h1>
+        <p style="color:var(--ink-soft);font-size:14px;">
+            @(Model.CompletandoCadastro
+                ? "Só falta o seu CEP, para a Nilda saber a região da entrega."
+                : "Conta pra gente seu nome e seu CEP. É só dessa vez — nos próximos pedidos a gente já te reconhece pelo número.")
+        </p>
 
-        <div class="mb-3">
-            <label asp-for="Entrada.NomeCompleto" class="form-label"></label>
-            <input asp-for="Entrada.NomeCompleto" class="form-control" placeholder="Como podemos te chamar?" required />
-            <span asp-validation-for="Entrada.NomeCompleto" class="text-danger"></span>
-        </div>
+        <form method="post" asp-page-handler="Cadastro" id="form-cadastro">
+            @if (Model.Erro is not null)
+            {
+                <div class="alert alert-danger py-2">@Model.Erro</div>
+            }
+            <input type="hidden" name="WhatsApp" value="@Model.WhatsApp" />
 
-        <div class="mb-4">
-            <label asp-for="Entrada.WhatsApp" class="form-label"></label>
-            <input asp-for="Entrada.WhatsApp" class="form-control" placeholder="(00) 00000-0000" required />
-            <span asp-validation-for="Entrada.WhatsApp" class="text-danger"></span>
-        </div>
+            <div class="dn-numero-confirmado mb-3">
+                <span>WhatsApp: <strong>@Model.WhatsApp</strong></span>
+                <a asp-page="/Cliente/Identificacao" asp-route-trocar="true">trocar</a>
+            </div>
 
-        <button type="submit" class="btn btn-primary w-100 btn-lg">Continuar</button>
-    </form>
+            @if (Model.CompletandoCadastro)
+            {
+                <input type="hidden" name="Nome" value="@Model.Nome" />
+            }
+            else
+            {
+                <label for="nome" class="form-label">Seu nome</label>
+                <input id="nome" name="Nome" value="@Model.Nome" class="form-control mb-3" autocomplete="name" placeholder="Como podemos te chamar?" required autofocus />
+            }
+
+            <label for="cep" class="form-label">CEP</label>
+            <div class="d-flex gap-2 align-items-center mb-1">
+                <input id="cep" name="Cep" value="@Model.Cep" inputmode="numeric" autocomplete="postal-code" maxlength="9"
+                       class="form-control" style="max-width:150px;" placeholder="00000-000" required />
+                <a href="https://buscacepinter.correios.com.br/app/endereco/index.php" target="_blank" rel="noopener" class="small">não sei meu CEP</a>
+            </div>
+            <div id="cep-resultado" class="dn-cep-resultado mb-3" @(string.IsNullOrWhiteSpace(Model.Bairro) ? "hidden" : "")>
+                <span id="cep-texto">@Model.Bairro@(string.IsNullOrWhiteSpace(Model.Cidade) ? "" : $", {Model.Cidade}")</span>
+            </div>
+            <input type="hidden" name="Bairro" id="bairro" value="@Model.Bairro" />
+            <input type="hidden" name="Cidade" id="cidade" value="@Model.Cidade" />
+
+            <button type="submit" class="btn btn-primary w-100 btn-lg mt-2">Continuar</button>
+        </form>
+    }
 </div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            // Máscara leve: (16) 99999-9999
+            document.querySelectorAll('.dn-mascara-tel').forEach(function (campo) {
+                campo.addEventListener('input', function () {
+                    var d = campo.value.replace(/\D/g, '').slice(0, 11);
+                    var f = d;
+                    if (d.length > 2) f = '(' + d.slice(0, 2) + ') ' + d.slice(2);
+                    if (d.length > 7) f = '(' + d.slice(0, 2) + ') ' + d.slice(2, d.length - 4) + '-' + d.slice(-4);
+                    campo.value = f;
+                });
+            });
+
+            // CEP: busca bairro e cidade no ViaCEP (serviço público dos Correios).
+            var cep = document.getElementById('cep');
+            if (!cep) return;
+            var caixa = document.getElementById('cep-resultado');
+            var texto = document.getElementById('cep-texto');
+            cep.addEventListener('input', function () {
+                var d = cep.value.replace(/\D/g, '').slice(0, 8);
+                cep.value = d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d;
+                if (d.length !== 8) { caixa.hidden = true; return; }
+                fetch('https://viacep.com.br/ws/' + d + '/json/')
+                    .then(function (r) { return r.json(); })
+                    .then(function (j) {
+                        caixa.hidden = false;
+                        if (j.erro) {
+                            texto.textContent = 'CEP não encontrado — confira os números.';
+                            caixa.classList.add('erro');
+                            document.getElementById('bairro').value = '';
+                            document.getElementById('cidade').value = '';
+                            return;
+                        }
+                        caixa.classList.remove('erro');
+                        document.getElementById('bairro').value = j.bairro || '';
+                        document.getElementById('cidade').value = j.localidade || '';
+                        texto.textContent = '📍 ' + [j.bairro, j.localidade + (j.uf ? ' - ' + j.uf : '')].filter(Boolean).join(', ');
+                    })
+                    .catch(function () { caixa.hidden = true; });
+            });
+        })();
+    </script>
 }

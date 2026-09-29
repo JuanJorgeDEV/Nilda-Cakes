@@ -1,46 +1,128 @@
 @page "{id:int}"
+@using DeliciasDaNilda.Domain.Enums
+@using DeliciasDaNilda.Services.Common
 @model DeliciasDaNilda.Pages.Cliente.ConfirmacaoModel
 @{
-    ViewData["Title"] = "Pedido confirmado";
+    ViewData["Title"] = "Meu pedido";
     ViewData["Shell"] = "cliente";
+    var cultura = new System.Globalization.CultureInfo("pt-BR");
 }
-
-<div class="dn-eyebrow mb-2">Confirmação</div>
 
 @if (Model.Pedido is not null)
 {
     var pedido = Model.Pedido;
-    var badge = DeliciasDaNilda.Pages.Shared.StatusBadgeHelper.Pedido(pedido.StatusPedido);
-    <div class="dn-card-highlight p-4 text-center">
-        <div class="dn-shape-circle dn-shape-check-bg mb-3">
-            <div class="dn-shape-check-bar-short"></div>
-            <div class="dn-shape-check-bar-long"></div>
-        </div>
-        <h1 class="h4 mb-2">Pedido recebido!</h1>
-        <p style="color:var(--ink-soft);font-size:14px;">
-            Assim que a Nilda confirmar pelo WhatsApp, te avisamos por lá.
-        </p>
+    var pago = pedido.Pagamentos.Sum(p => p.Valor);
+    var cancelado = pedido.StatusPedido == StatusPedido.Cancelado;
+    // Linha do tempo: 1 recebido · 2 confirmado pela Nilda · 3 entregue (RN08).
+    var passo = pedido.StatusPedido switch
+    {
+        StatusPedido.PendenteConfirmacao => 1,
+        StatusPedido.Confirmado => 2,
+        StatusPedido.Concluido => 3,
+        _ => 0
+    };
+    var dataTexto = pedido.DataEntrega.ToString("dddd, d 'de' MMMM", cultura);
 
-        <div class="dn-resumo text-start mb-3">
-            <div class="dn-resumo-linha"><span>Pedido</span><strong>#@pedido.Id</strong></div>
-            <div class="dn-resumo-linha"><span>Sabor</span><strong>@pedido.Sabor.Nome</strong></div>
-            <div class="dn-resumo-linha"><span>Peso</span><strong>@pedido.Peso.ToString("N3") kg</strong></div>
-            <div class="dn-resumo-linha"><span>Valor total</span><strong style="color:var(--wine);">@pedido.ValorTotal.ToString("C")</strong></div>
-            <div class="dn-resumo-linha"><span>Data de entrega</span><strong>@pedido.DataEntrega.ToString("dd/MM/yyyy")</strong></div>
+    <div class="d-flex justify-content-between align-items-baseline mb-2">
+        <div class="dn-eyebrow">Pedido @MensagemPedidoWhatsApp.Codigo(pedido.Id)</div>
+        <a asp-page="/Cliente/MeusPedidos" class="small">meus pedidos</a>
+    </div>
+
+    <div class="dn-card-highlight p-4">
+        @if (cancelado)
+        {
+            <h1 class="h4 mb-1">Pedido cancelado</h1>
+            <p style="color:var(--ink-soft);font-size:14px;">Se tiver alguma dúvida, fale com a Nilda pelo WhatsApp.</p>
+        }
+        else
+        {
+            <h1 class="h4 mb-1">@(passo switch { 1 => "Pedido recebido!", 2 => "Pedido confirmado! 🎂", _ => "Pedido entregue. Bom apetite!" })</h1>
+            <p style="color:var(--ink-soft);font-size:14px;">
+                @(passo switch
+                {
+                    1 => "Agora a Nilda confirma a encomenda e combina o horário com você pelo WhatsApp.",
+                    2 => $"Seu bolo fica pronto {dataTexto}" + (pedido.HorarioRetirada is { } h ? $", às {h:HH\\:mm}." : ". O horário é combinado pelo WhatsApp."),
+                    _ => "Obrigada pela preferência!"
+                })
+            </p>
+
+            <ol class="dn-linha-tempo">
+                <li class="@(passo >= 1 ? "feito" : "")">Pedido recebido</li>
+                <li class="@(passo >= 2 ? "feito" : passo == 1 ? "atual" : "")">Confirmado pela Nilda</li>
+                <li class="@(passo >= 3 ? "feito" : passo == 2 ? "atual" : "")">Entregue</li>
+            </ol>
+        }
+
+        <dl class="dn-resumo-pedido">
+            <div><dt>Bolo</dt><dd>@pedido.Sabor.Nome</dd></div>
+            <div><dt>Tamanho</dt><dd>@QuantidadeFormatter.Formatar(pedido.Peso, "kg") (~@((int)(pedido.Peso * 10)) pessoas)</dd></div>
+            <div><dt>Entrega</dt><dd>@dataTexto@(pedido.HorarioRetirada is { } hr ? $", {hr:HH\\:mm}" : "")</dd></div>
+            @if (pedido.EhAniversario && !string.IsNullOrWhiteSpace(pedido.NomeAniversariante))
+            {
+                <div><dt>Ocasião</dt><dd>Aniversário de @pedido.NomeAniversariante@(pedido.IdadeAniversariante is { } i ? $" ({i} anos)" : "")</dd></div>
+            }
+            @if (!string.IsNullOrWhiteSpace(pedido.Tema))
+            {
+                <div><dt>Tema</dt><dd>@pedido.Tema</dd></div>
+            }
             @if (!string.IsNullOrWhiteSpace(pedido.Observacoes))
             {
-                <div class="dn-resumo-linha"><span>Observações</span><strong style="text-align:right;max-width:60%;">@pedido.Observacoes</strong></div>
+                <div><dt>Observações</dt><dd>@pedido.Observacoes</dd></div>
             }
-        </div>
+            <div>
+                <dt>Pagamento</dt>
+                <dd>
+                    @if (pago >= pedido.ValorTotal)
+                    {
+                        <span>Pago ✓</span>
+                    }
+                    else if (pago > 0)
+                    {
+                        <span>Sinal de @pago.ToString("C") recebido · falta @((pedido.ValorTotal - pago).ToString("C"))</span>
+                    }
+                    else
+                    {
+                        <span>@pedido.ValorTotal.ToString("C") · combinado com a Nilda (sinal ou na retirada)</span>
+                    }
+                </dd>
+            </div>
+        </dl>
 
-        <div class="d-flex justify-content-center mb-3">
-            <span class="dn-badge @badge.CssClass">● @badge.Label</span>
-        </div>
-
-        <p style="font-size:12.5px;color:var(--ink-soft);">
-            A confirmação do pedido e o pagamento são combinados via WhatsApp ou direto na retirada.
-        </p>
-
-        <a asp-page="/Cliente/NovoPedido" class="btn btn-outline-primary w-100 btn-lg">Fazer novo pedido</a>
+        @if (Model.LinkWhatsApp is not null)
+        {
+            <a href="@Model.LinkWhatsApp" target="_blank" rel="noopener" class="btn btn-whatsapp w-100 btn-lg">
+                @(passo == 1 ? "Enviar pedido no WhatsApp" : "Falar com a Nilda no WhatsApp")
+            </a>
+        }
+        <a asp-page="/Cliente/MeusPedidos" class="btn btn-link w-100 mt-2">Ver todos os meus pedidos</a>
     </div>
+
+    @if (Model.LinkWhatsApp is not null)
+    {
+        <div class="modal fade" id="modal-whatsapp" tabindex="-1" aria-labelledby="modal-whatsapp-titulo" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content dn-modal-envio">
+                    <div class="modal-body text-center p-4">
+                        <div class="dn-modal-icone" aria-hidden="true">💬</div>
+                        <h2 class="h5 mb-2" id="modal-whatsapp-titulo">Falta só um passo!</h2>
+                        <p style="color:var(--ink-soft);font-size:14px;">
+                            Seu pedido foi registrado. Agora envie pro WhatsApp da Nilda — a mensagem já vai prontinha,
+                            com tudo o que você escolheu. É por lá que ela confirma a encomenda.
+                        </p>
+                        <a href="@Model.LinkWhatsApp" target="_blank" rel="noopener" class="btn btn-whatsapp w-100 btn-lg mb-2">Enviar pelo WhatsApp</a>
+                        <button type="button" class="btn btn-link btn-sm" data-bs-dismiss="modal">Enviar depois</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@section Scripts {
+    @if (Model.Enviar && Model.LinkWhatsApp is not null && Model.Pedido?.StatusPedido == StatusPedido.PendenteConfirmacao)
+    {
+        <script>
+            new bootstrap.Modal(document.getElementById('modal-whatsapp')).show();
+        </script>
+    }
 }

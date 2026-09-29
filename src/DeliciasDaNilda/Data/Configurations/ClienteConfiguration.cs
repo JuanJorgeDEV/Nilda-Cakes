@@ -22,6 +22,16 @@ public class ClienteConfiguration : IEntityTypeConfiguration<Cliente>
             .HasMaxLength(20)
             .IsUnicode(false);
 
+        builder.Property(c => c.Cep)
+            .HasMaxLength(8)
+            .IsUnicode(false);
+
+        builder.Property(c => c.Bairro)
+            .HasMaxLength(100);
+
+        builder.Property(c => c.Cidade)
+            .HasMaxLength(100);
+
         builder.Property(c => c.CriadoEm)
             .IsRequired()
             .HasDefaultValueSql("GETUTCDATE()");

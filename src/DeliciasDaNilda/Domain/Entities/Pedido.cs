@@ -64,6 +64,22 @@ public class Pedido
 
     public string? Observacoes { get; set; }
 
+    /// <summary>Ocasião: é bolo de aniversário? (funil do pedido no site)</summary>
+    public bool EhAniversario { get; set; }
+
+    public string? NomeAniversariante { get; set; }
+
+    public int? IdadeAniversariante { get; set; }
+
+    /// <summary>Tema ou cores da decoração, se a cliente quiser.</summary>
+    public string? Tema { get; set; }
+
+    /// <summary>
+    /// Personalização ou referência enviada pela cliente depois do pedido
+    /// (pelo bot do WhatsApp). Texto livre; fotos ficam na conversa.
+    /// </summary>
+    public string? Personalizacao { get; set; }
+
     /// <summary>Data de registro do pedido — base para checar antecedência mínima (RN05).</summary>
     public DateTime CriadoEm { get; set; }
 

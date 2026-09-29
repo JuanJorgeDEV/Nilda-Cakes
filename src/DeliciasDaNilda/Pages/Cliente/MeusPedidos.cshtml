@@ -1,0 +1,52 @@
+@page
+@using DeliciasDaNilda.Domain.Enums
+@using DeliciasDaNilda.Services.Common
+@model DeliciasDaNilda.Pages.Cliente.MeusPedidosModel
+@{
+    ViewData["Title"] = "Meus pedidos";
+    ViewData["Shell"] = "cliente";
+    var cultura = new System.Globalization.CultureInfo("pt-BR");
+    var hoje = DateOnly.FromDateTime(DateTime.Today);
+    string Situacao(StatusPedido s) => s switch
+    {
+        StatusPedido.PendenteConfirmacao => "Aguardando a Nilda confirmar",
+        StatusPedido.Confirmado => "Confirmado",
+        StatusPedido.Concluido => "Entregue",
+        _ => "Cancelado"
+    };
+}
+
+<div class="dn-saudacao">
+    <span>Pedidos de <strong>@((Model.ClienteNome ?? "").Split(' ')[0])</strong></span>
+    <a asp-page="/Cliente/Identificacao" asp-route-trocar="true">não é você?</a>
+</div>
+
+@if (Model.Pedidos.Count == 0)
+{
+    <div class="dn-card-highlight p-4 text-center">
+        <p class="mb-3" style="color:var(--ink-soft);">Você ainda não fez nenhum pedido.</p>
+        <a asp-page="/Cliente/NovoPedido" class="btn btn-primary btn-lg w-100">Fazer meu pedido</a>
+    </div>
+}
+else
+{
+    <div class="d-flex flex-column gap-2 mb-3">
+        @foreach (var p in Model.Pedidos)
+        {
+            var badge = DeliciasDaNilda.Pages.Shared.StatusBadgeHelper.Pedido(p.StatusPedido);
+            <a asp-page="/Cliente/Confirmacao" asp-route-id="@p.Id" class="dn-entrega">
+                <span class="dn-data-bloco @(p.DataEntrega == hoje ? "hoje" : "")">
+                    <span class="dn-data-sem">@p.DataEntrega.ToString("ddd", cultura).TrimEnd('.')</span>
+                    <span class="dn-data-dia">@p.DataEntrega.Day</span>
+                    <span class="dn-data-mes">@p.DataEntrega.ToString("MMM", cultura).TrimEnd('.')</span>
+                </span>
+                <span class="dn-entrega-info">
+                    <span class="dn-pedido-cliente">@p.Sabor.Nome</span>
+                    <span class="dn-pedido-sub">@QuantidadeFormatter.Formatar(p.Peso, "kg") · @MensagemPedidoWhatsApp.Codigo(p.Id)</span>
+                    <span class="dn-badge @badge.CssClass mt-1 align-self-start">● @Situacao(p.StatusPedido)</span>
+                </span>
+            </a>
+        }
+    </div>
+    <a asp-page="/Cliente/NovoPedido" class="btn btn-outline-primary w-100">Fazer outro pedido</a>
+}
