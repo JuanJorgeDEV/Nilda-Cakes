@@ -1067,3 +1067,57 @@ h1, h2, h3, .dn-title {
 .dn-custo-resumo p { flex-basis: 100%; font-size: 12px; color: var(--warn); }
 
 .validation-summary-valid { display: none; }
+
+/* Estoque (insumos) ---------------------------------------------------------*/
+
+.dn-chip-num { color: var(--ink-soft); font-size: 11.5px; }
+.dn-chip.ativo .dn-chip-num { color: rgba(255, 255, 255, .8); }
+
+.dn-insumos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.dn-insumo {
+  background: #fff;
+  border: 1px solid var(--cream-2);
+  border-radius: 16px;
+  padding: 14px 16px 10px;
+  scroll-margin-top: 16px;
+}
+.dn-insumo.baixo { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger-bg) inset; }
+.dn-insumo.destaque { animation: dn-destaque 1.6s ease-out; }
+@keyframes dn-destaque { from { box-shadow: 0 0 0 4px var(--rose); } to { box-shadow: 0 0 0 0 transparent; } }
+
+.dn-insumo-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.dn-insumo-nome { font-size: 15px; font-weight: 600; margin: 0; }
+.dn-insumo-cat { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-soft); }
+.dn-insumo-saldo { font-size: 26px; font-weight: 700; color: var(--wine); margin: 6px 0 4px; }
+.dn-insumo.baixo .dn-insumo-saldo { color: var(--danger); }
+.dn-insumo-info { font-size: 12px; color: var(--ink-soft); }
+
+.dn-nivel { height: 6px; border-radius: 999px; background: var(--cream-2); overflow: hidden; margin: 2px 0 4px; }
+.dn-nivel span { display: block; height: 100%; background: var(--ok); border-radius: 999px; }
+.dn-nivel.atencao span { background: var(--gold); }
+.dn-nivel.baixo span { background: var(--danger); }
+
+.dn-insumo-entrada { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--cream-2); }
+.dn-insumo-rotulo { font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+.dn-chip-mais { padding: 4px 10px; font-size: 12.5px; background: var(--ok-bg); border-color: transparent; color: var(--ok); font-weight: 600; }
+.dn-chip-mais:hover { background: var(--ok); color: #fff; border-color: var(--ok); }
+
+.dn-insumo-acoes { display: flex; gap: 14px; margin-top: 6px; }
+.dn-insumo-acoes .btn-link { font-size: 12.5px; text-decoration: none; }
+.dn-insumo-sub { background: var(--cream); border-radius: 12px; padding: 10px 12px; margin: 4px 0 6px; }
+
+.dn-movimentos { list-style: none; margin: 0; padding: 4px 16px; }
+.dn-movimentos li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--cream-2); }
+.dn-movimentos li:last-child { border-bottom: 0; }
+.dn-mov-tipo { font-weight: 600; font-size: 14px; }
+.dn-mov-detalhe { font-size: 12.5px; color: var(--ink-soft); }
+.dn-mov-qtd { font-weight: 700; white-space: nowrap; }
+.dn-movimentos .entrada .dn-mov-qtd { color: var(--ok); }
+.dn-movimentos .perda .dn-mov-qtd { color: var(--danger); }
+.dn-movimentos .saida .dn-mov-qtd { color: var(--ink-soft); }

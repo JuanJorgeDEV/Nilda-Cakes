@@ -1,0 +1,53 @@
+@page
+@using DeliciasDaNilda.Domain.Enums
+@using DeliciasDaNilda.Services.Common
+@model DeliciasDaNilda.Pages.Admin.Insumos.HistoricoModel
+@{
+    var ing = Model.Ingrediente!;
+    ViewData["Title"] = $"Histórico · {ing.Nome}";
+}
+
+<div class="d-flex align-items-center gap-2 mb-1">
+    <a asp-page="/Admin/Insumos/Index" asp-fragment="ing-@ing.Id" class="dn-seta" aria-label="Voltar ao estoque">‹</a>
+    <h1 class="h4 mb-0">@ing.Nome</h1>
+</div>
+<p class="mb-3" style="color:var(--ink-soft);">Saldo atual: <strong>@QuantidadeFormatter.Formatar(ing.SaldoAtual, ing.UnidadeMedida)</strong> · últimos 100 movimentos</p>
+
+@if (Model.Movimentos.Count == 0)
+{
+    <div class="dn-card p-3" style="color:var(--ink-soft);">Nenhum movimento ainda.</div>
+}
+else
+{
+    <ul class="dn-movimentos dn-card">
+        @foreach (var m in Model.Movimentos)
+        {
+            // Entrada (RN11) e estorno de pedido cancelado somam; abate (RN12) e perda (RN13) subtraem.
+            var entra = m.Tipo is TipoMovimentoEstoque.Entrada or TipoMovimentoEstoque.AjusteCorrecao;
+            var (rotulo, classe) = m.Tipo switch
+            {
+                TipoMovimentoEstoque.Entrada => ("Entrada", "entrada"),
+                TipoMovimentoEstoque.SaidaConfirmacaoPedido => ("Pedido confirmado", "saida"),
+                TipoMovimentoEstoque.AjustePerda => ("Perda", "perda"),
+                _ => ("Devolvido (pedido cancelado)", "entrada")
+            };
+            <li class="@classe">
+                <div>
+                    <div class="dn-mov-tipo">@rotulo</div>
+                    <div class="dn-mov-detalhe">
+                        @m.CriadoEm.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                        @if (m.Pedido is not null)
+                        {
+                            <span>· <a asp-page="/Admin/Pedidos/Index" asp-route-f="todos" asp-route-aberto="@m.PedidoId">pedido de @m.Pedido.Cliente.NomeCompleto</a></span>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(m.Motivo))
+                        {
+                            <span>· @m.Motivo</span>
+                        }
+                    </div>
+                </div>
+                <div class="dn-mov-qtd">@(entra ? "+" : "−")@QuantidadeFormatter.Formatar(m.Quantidade, ing.UnidadeMedida)</div>
+            </li>
+        }
+    </ul>
+}

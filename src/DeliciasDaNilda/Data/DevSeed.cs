@@ -74,6 +74,35 @@ public static class DevSeed
         ("Biscoito Oreo", "kg", 5m, 1m),
     };
 
+    // Categoria e custo FICTÍCIO por unidade (R$/kg, R$/L, R$/un) — só para o
+    // painel financeiro ter números plausíveis em desenvolvimento.
+    private static readonly Dictionary<string, (CategoriaIngrediente Categoria, decimal Custo)> CategoriaECusto = new()
+    {
+        ["Farinha de trigo"] = (CategoriaIngrediente.FarinhasESecos, 6m),
+        ["Ovos"] = (CategoriaIngrediente.Outros, 0.8m),
+        ["Açúcar"] = (CategoriaIngrediente.Acucares, 5m),
+        ["Manteiga"] = (CategoriaIngrediente.Laticinios, 45m),
+        ["Leite integral"] = (CategoriaIngrediente.Laticinios, 5.5m),
+        ["Leite em pó"] = (CategoriaIngrediente.Laticinios, 40m),
+        ["Leite condensado"] = (CategoriaIngrediente.Laticinios, 22m),
+        ["Creme de leite"] = (CategoriaIngrediente.Laticinios, 20m),
+        ["Doce de leite"] = (CategoriaIngrediente.RecheiosECremes, 25m),
+        ["Chocolate ao leite"] = (CategoriaIngrediente.Chocolates, 55m),
+        ["Chocolate meio amargo"] = (CategoriaIngrediente.Chocolates, 60m),
+        ["Chocolate branco"] = (CategoriaIngrediente.Chocolates, 60m),
+        ["Chocolate Alpino"] = (CategoriaIngrediente.Chocolates, 80m),
+        ["Cacau em pó"] = (CategoriaIngrediente.Chocolates, 50m),
+        ["Cream cheese"] = (CategoriaIngrediente.Laticinios, 45m),
+        ["Coco ralado"] = (CategoriaIngrediente.FarinhasESecos, 40m),
+        ["Polpa de maracujá"] = (CategoriaIngrediente.Frutas, 20m),
+        ["Morango"] = (CategoriaIngrediente.Frutas, 25m),
+        ["Abacaxi"] = (CategoriaIngrediente.Frutas, 8m),
+        ["Paçoca"] = (CategoriaIngrediente.Outros, 30m),
+        ["Nozes"] = (CategoriaIngrediente.FarinhasESecos, 90m),
+        ["Ameixa seca"] = (CategoriaIngrediente.Frutas, 45m),
+        ["Biscoito Oreo"] = (CategoriaIngrediente.Biscoitos, 40m),
+    };
+
     // Base de massa comum a todos os sabores (FICTÍCIA), quantidade por 1 kg de bolo.
     private static readonly (string Ing, decimal Qtd)[] BaseMassa =
     {
@@ -170,7 +199,8 @@ public static class DevSeed
         var ingredienteIds = new Dictionary<string, int>();
         foreach (var (nome, un, estoque, minimo) in IngredientesSeed)
         {
-            var ing = Exigir(await ingredienteSvc.CriarAsync(nome, un, minimo, ct), $"ingrediente {nome}");
+            var (categoria, custo) = CategoriaECusto.GetValueOrDefault(nome, (CategoriaIngrediente.Outros, 0m));
+            var ing = Exigir(await ingredienteSvc.CriarAsync(new DadosIngrediente(nome, un, categoria, minimo, custo > 0 ? custo : null), ct), $"ingrediente {nome}");
             ingredienteIds[nome] = ing.Id;
             ExigirOk(await estoqueSvc.RegistrarEntradaAsync(ing.Id, estoque, admin.Id, "Estoque inicial (seed de teste)", ct), $"entrada {nome}");
         }

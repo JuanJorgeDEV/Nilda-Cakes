@@ -44,7 +44,7 @@
                 </div>
                 <div>
                     <div class="dn-alert-item-label">Quanto comprar</div>
-                    <div class="dn-alert-item-valor">@alerta.QuantidadeFaltante.ToString("N4") @alerta.UnidadeMedida</div>
+                    <div class="dn-alert-item-valor">@DeliciasDaNilda.Services.Common.QuantidadeFormatter.Formatar(alerta.QuantidadeFaltante, alerta.UnidadeMedida)</div>
                 </div>
                 <div>
                     <div class="dn-alert-item-label">Pedido afetado</div>

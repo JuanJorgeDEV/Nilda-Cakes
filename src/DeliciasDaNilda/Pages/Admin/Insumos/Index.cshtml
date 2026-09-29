@@ -1,122 +1,279 @@
 @page
+@using System.Globalization
+@using DeliciasDaNilda.Domain.Enums
+@using DeliciasDaNilda.Services.Common
+@using Microsoft.AspNetCore.Mvc.Rendering
 @model DeliciasDaNilda.Pages.Admin.Insumos.IndexModel
 @{
-    ViewData["Title"] = "Insumos";
+    ViewData["Title"] = "Estoque";
+    var inv = CultureInfo.InvariantCulture;
+    int.TryParse(Request.Query["destaque"], out var destaque);
+    var categorias = Html.GetEnumSelectList<CategoriaIngrediente>().ToList();
+    var porCategoria = Model.Ingredientes.GroupBy(i => i.Categoria).ToDictionary(g => g.Key, g => g.Count());
+    var baixos = Model.Ingredientes.Count(i => i.EstoqueMinimoAlerta is { } m && i.SaldoAtual < m);
+
+    (decimal Valor, string Rotulo)[] Rapidos(string unidade) => unidade.Trim().ToLowerInvariant() switch
+    {
+        "kg" => new[] { (0.25m, "250 g"), (0.5m, "500 g"), (1m, "1 kg"), (5m, "5 kg") },
+        "l" => new[] { (0.5m, "500 ml"), (1m, "1 L"), (2m, "2 L"), (5m, "5 L") },
+        "g" => new[] { (100m, "100 g"), (500m, "500 g"), (1000m, "1 kg") },
+        "ml" => new[] { (200m, "200 ml"), (500m, "500 ml"), (1000m, "1 L") },
+        _ => new[] { (1m, "1"), (6m, "6"), (12m, "12"), (30m, "30") }
+    };
+    string[] Unidades(string unidade) => QuantidadeFormatter.UnidadeMenor(unidade) is { } menor ? new[] { menor, unidade } : new[] { unidade };
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h4 mb-0">Insumos</h1>
+<div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3">
+    <h1 class="h4 mb-0">Estoque</h1>
+    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-novo">+ Adicionar insumo</button>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(Model.MensagemSucesso))
 {
-    <div class="alert alert-success">@Model.MensagemSucesso</div>
+    <div class="alert alert-success py-2">@Model.MensagemSucesso</div>
 }
 @if (!string.IsNullOrWhiteSpace(Model.MensagemErro))
 {
-    <div class="alert alert-danger">@Model.MensagemErro</div>
+    <div class="alert alert-danger py-2">@Model.MensagemErro</div>
 }
 
-<div class="dn-insumos-grid mb-4">
-    <div class="dn-card p-3">
-        <h2 class="h6" style="color:var(--wine);">Novo ingrediente</h2>
-        <form method="post" asp-page-handler="NovoIngrediente">
-            <div class="mb-2">
-                <label asp-for="NovoIngrediente.Nome" class="form-label"></label>
-                <input asp-for="NovoIngrediente.Nome" class="form-control" placeholder="Ex: Leite condensado" required />
-            </div>
-            <div class="mb-2">
-                <label asp-for="NovoIngrediente.UnidadeMedida" class="form-label"></label>
-                <input asp-for="NovoIngrediente.UnidadeMedida" class="form-control" placeholder="kg, g, L, ml, un" required />
-            </div>
-            <div class="mb-3">
-                <label asp-for="NovoIngrediente.EstoqueMinimoAlerta" class="form-label"></label>
-                <input asp-for="NovoIngrediente.EstoqueMinimoAlerta" type="number" step="0.0001" min="0" class="form-control" placeholder="Ex: 5" />
-            </div>
-            <button type="submit" class="btn btn-primary btn-sm w-100">Cadastrar</button>
-        </form>
-    </div>
+@if (Model.Projecao is { EstoqueSuficiente: false, Alerta: { } alerta })
+{
+    <a asp-page="/Admin/Estoque/Alertas" class="dn-aviso-falta d-block mb-3 text-decoration-none">
+        ⚠ Vai faltar <strong>@alerta.IngredienteNome</strong> (@QuantidadeFormatter.Formatar(alerta.QuantidadeFaltante, alerta.UnidadeMedida))
+        para o pedido de @alerta.DataEntregaPedidoAfetado.ToString("dd/MM"). Comprar até @alerta.DataLimiteCompra.ToString("dd/MM") ›
+    </a>
+}
 
-    <div class="dn-card p-3">
-        <h2 class="h6" style="color:var(--wine);">Registrar entrada</h2>
-        <form method="post" asp-page-handler="Entrada">
-            <div class="mb-2">
-                <label asp-for="Entrada.IngredienteId" class="form-label">Ingrediente</label>
-                <select asp-for="Entrada.IngredienteId" class="form-select" required>
-                    <option value="">Selecione</option>
-                    @foreach (var ingrediente in Model.Ingredientes)
-                    {
-                        <option value="@ingrediente.Id">@ingrediente.Nome (@ingrediente.UnidadeMedida)</option>
-                    }
-                </select>
-            </div>
-            <div class="mb-2">
-                <label asp-for="Entrada.Quantidade" class="form-label"></label>
-                <input asp-for="Entrada.Quantidade" type="number" step="0.0001" min="0.0001" class="form-control" placeholder="Ex: 12" required />
-            </div>
-            <div class="mb-3">
-                <label asp-for="Entrada.Motivo" class="form-label">Observação (opcional)</label>
-                <input asp-for="Entrada.Motivo" class="form-control" placeholder="Nota fiscal, fornecedor..." />
-            </div>
-            <button type="submit" class="btn btn-success btn-sm w-100">Registrar entrada</button>
-        </form>
-    </div>
+<div class="d-flex gap-2 flex-wrap align-items-center mb-3">
+    <nav class="dn-chips" id="filtro-categorias" aria-label="Categorias">
+        <button type="button" class="dn-chip ativo" data-categoria="">Todos <span class="dn-chip-num">@Model.Ingredientes.Count</span></button>
+        @if (baixos > 0)
+        {
+            <button type="button" class="dn-chip" data-categoria="baixo">Acabando <span class="dn-chip-contador">@baixos</span></button>
+        }
+        @foreach (var cat in categorias.Where(c => porCategoria.ContainsKey((CategoriaIngrediente)int.Parse(c.Value))))
+        {
+            <button type="button" class="dn-chip" data-categoria="@cat.Value">@cat.Text <span class="dn-chip-num">@porCategoria[(CategoriaIngrediente)int.Parse(cat.Value)]</span></button>
+        }
+    </nav>
+    <input type="search" id="busca-insumo" class="form-control form-control-sm ms-md-auto" placeholder="Buscar insumo..." style="max-width:220px;" aria-label="Buscar insumo" />
+</div>
 
-    <div class="dn-card p-3">
-        <h2 class="h6" style="color:var(--wine);">Registrar perda/ajuste</h2>
-        <form method="post" asp-page-handler="Ajuste">
-            <div class="mb-2">
-                <label asp-for="Ajuste.IngredienteId" class="form-label">Ingrediente</label>
-                <select asp-for="Ajuste.IngredienteId" class="form-select" required>
-                    <option value="">Selecione</option>
-                    @foreach (var ingrediente in Model.Ingredientes)
+@if (Model.Ingredientes.Count == 0)
+{
+    <div class="dn-card p-4 text-center" style="color:var(--ink-soft);">Nenhum insumo cadastrado. Use "+ Adicionar insumo".</div>
+}
+
+<div class="dn-insumos">
+    @foreach (var ing in Model.Ingredientes.OrderBy(i => i.Nome))
+    {
+        var minimo = ing.EstoqueMinimoAlerta;
+        var baixo = minimo is { } m1 && ing.SaldoAtual < m1;
+        var atencao = !baixo && minimo is { } m2 && ing.SaldoAtual < m2 * 2;
+        var nivel = minimo is > 0 ? Math.Min(100, (int)(ing.SaldoAtual / (minimo.Value * 3) * 100)) : (int?)null;
+        var unidadesDigitacao = Unidades(ing.UnidadeMedida);
+        var catNome = categorias.First(c => c.Value == ((int)ing.Categoria).ToString()).Text;
+        <article class="dn-insumo @(baixo ? "baixo" : "") @(ing.Id == destaque ? "destaque" : "")" id="ing-@ing.Id"
+                 data-categoria="@((int)ing.Categoria)" data-baixo="@(baixo ? "1" : "0")" data-nome="@ing.Nome.ToLowerInvariant()">
+            <header class="dn-insumo-topo">
+                <div>
+                    <h2 class="dn-insumo-nome">@ing.Nome</h2>
+                    <span class="dn-insumo-cat">@catNome</span>
+                </div>
+                @if (baixo)
+                {
+                    <span class="dn-badge dn-badge-falta">Acabando</span>
+                }
+            </header>
+
+            <div class="dn-insumo-saldo">@QuantidadeFormatter.Formatar(ing.SaldoAtual, ing.UnidadeMedida)</div>
+            @if (nivel is not null)
+            {
+                <div class="dn-nivel @(baixo ? "baixo" : atencao ? "atencao" : "")" title="Mínimo: @QuantidadeFormatter.Formatar(minimo!.Value, ing.UnidadeMedida)">
+                    <span style="width:@(nivel)%"></span>
+                </div>
+                <div class="dn-insumo-info">mínimo @QuantidadeFormatter.Formatar(minimo!.Value, ing.UnidadeMedida)</div>
+            }
+            <div class="dn-insumo-info">
+                @if (ing.CustoPorUnidade is { } custo)
+                {
+                    <span>@custo.ToString("C")/@ing.UnidadeMedida</span>
+                }
+                else
+                {
+                    <span class="text-warning-emphasis">sem custo cadastrado</span>
+                }
+            </div>
+
+            <form method="post" asp-page-handler="Entrada" asp-route-id="@ing.Id" class="dn-insumo-entrada">
+                <div class="dn-insumo-rotulo">Chegou:</div>
+                <div class="dn-chips">
+                    @foreach (var (valor, rotulo) in Rapidos(ing.UnidadeMedida))
                     {
-                        <option value="@ingrediente.Id">@ingrediente.Nome (@ingrediente.UnidadeMedida)</option>
+                        <button type="submit" name="rapido" value="@valor.ToString(inv)" class="dn-chip dn-chip-mais">+@rotulo</button>
                     }
-                </select>
+                </div>
+                <div class="input-group input-group-sm mt-2">
+                    <input type="number" name="quantidade" step="any" min="0" class="form-control" placeholder="outra quantidade" aria-label="Outra quantidade" />
+                    @if (unidadesDigitacao.Length > 1)
+                    {
+                        <select name="unidade" class="form-select" style="max-width:72px;" aria-label="Unidade">
+                            @foreach (var u in unidadesDigitacao)
+                            {
+                                <option value="@u" selected="@(u == ing.UnidadeMedida)">@u</option>
+                            }
+                        </select>
+                    }
+                    else
+                    {
+                        <span class="input-group-text">@ing.UnidadeMedida</span>
+                    }
+                    <button type="submit" class="btn btn-outline-primary">Somar</button>
+                </div>
+            </form>
+
+            <div class="dn-insumo-acoes">
+                <button type="button" class="btn btn-link btn-sm px-0" data-bs-toggle="collapse" data-bs-target="#perda-@ing.Id">Registrar perda</button>
+                <button type="button" class="btn btn-link btn-sm px-0" data-bs-toggle="collapse" data-bs-target="#editar-@ing.Id">Editar</button>
+                <a asp-page="/Admin/Insumos/Historico" asp-route-id="@ing.Id" class="btn btn-link btn-sm px-0 ms-auto">Histórico</a>
             </div>
-            <div class="mb-2">
-                <label asp-for="Ajuste.Quantidade" class="form-label"></label>
-                <input asp-for="Ajuste.Quantidade" type="number" step="0.0001" min="0.0001" class="form-control" placeholder="Ex: 1.2" required />
+
+            <div class="collapse" id="perda-@ing.Id">
+                <form method="post" asp-page-handler="Perda" asp-route-id="@ing.Id" class="dn-insumo-sub">
+                    <div class="input-group input-group-sm mb-2">
+                        <input type="number" name="quantidade" step="any" min="0" class="form-control" placeholder="quanto se perdeu" aria-label="Quantidade perdida" required />
+                        @if (unidadesDigitacao.Length > 1)
+                        {
+                            <select name="unidade" class="form-select" style="max-width:72px;" aria-label="Unidade">
+                                @foreach (var u in unidadesDigitacao)
+                                {
+                                    <option value="@u">@u</option>
+                                }
+                            </select>
+                        }
+                        else
+                        {
+                            <span class="input-group-text">@ing.UnidadeMedida</span>
+                        }
+                    </div>
+                    <div class="dn-chips mb-2" role="radiogroup" aria-label="Motivo">
+                        @foreach (var motivo in new[] { "Venceu", "Estragou", "Caiu / avaria", "Outro" })
+                        {
+                            var idMotivo = $"motivo-{ing.Id}-{motivo.GetHashCode():x}";
+                            <input type="radio" class="btn-check" name="motivo" id="@idMotivo" value="@motivo" checked="@(motivo == "Venceu")" />
+                            <label class="dn-chip" for="@idMotivo">@motivo</label>
+                        }
+                    </div>
+                    <input type="text" name="motivoOutro" class="form-control form-control-sm mb-2" placeholder="Descreva o motivo (se for Outro)" maxlength="200" />
+                    <button type="submit" class="btn btn-outline-danger btn-sm w-100">Registrar perda</button>
+                </form>
             </div>
-            <div class="mb-3">
-                <label asp-for="Ajuste.Motivo" class="form-label">Motivo (obrigatório)</label>
-                <input asp-for="Ajuste.Motivo" class="form-control" placeholder="Ex: validade vencida" required />
+
+            <div class="collapse" id="editar-@ing.Id">
+                <form method="post" asp-page-handler="Editar" asp-route-id="@ing.Id" class="dn-insumo-sub">
+                    <label class="form-label small mb-1">Nome</label>
+                    <input type="text" name="dados.Nome" value="@ing.Nome" class="form-control form-control-sm mb-2" required maxlength="150" />
+                    <label class="form-label small mb-1">Categoria</label>
+                    <select name="dados.Categoria" class="form-select form-select-sm mb-2">
+                        @foreach (var cat in categorias)
+                        {
+                            <option value="@cat.Value" selected="@(cat.Value == ((int)ing.Categoria).ToString())">@cat.Text</option>
+                        }
+                    </select>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label small mb-1">Mínimo (@ing.UnidadeMedida)</label>
+                            <input type="number" name="dados.EstoqueMinimoAlerta" value="@(minimo?.ToString("0.###", inv))" step="any" min="0" class="form-control form-control-sm" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small mb-1">Custo (R$/@ing.UnidadeMedida)</label>
+                            <input type="number" name="dados.CustoPorUnidade" value="@(ing.CustoPorUnidade?.ToString("0.00", inv))" step="0.01" min="0" class="form-control form-control-sm" />
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm w-100">Salvar</button>
+                </form>
             </div>
-            <button type="submit" class="btn btn-outline-danger btn-sm w-100">Registrar perda</button>
+        </article>
+    }
+</div>
+<p id="sem-resultado" class="text-center mt-3" style="color:var(--ink-soft);" hidden>Nenhum insumo encontrado.</p>
+
+<div class="modal fade" id="modal-novo" tabindex="-1" aria-labelledby="modal-novo-titulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="post" asp-page-handler="Novo" class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5 dn-secao-titulo" id="modal-novo-titulo">Novo insumo</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <label asp-for="Novo.Nome" class="form-label">Nome</label>
+                <input asp-for="Novo.Nome" class="form-control mb-3" placeholder="Ex: Leite condensado" required />
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label asp-for="Novo.UnidadeMedida" class="form-label">Unidade</label>
+                        <select asp-for="Novo.UnidadeMedida" class="form-select">
+                            <option value="kg">kg (quilo)</option>
+                            <option value="L">L (litro)</option>
+                            <option value="un">un (unidade)</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label asp-for="Novo.Categoria" class="form-label">Categoria</label>
+                        <select asp-for="Novo.Categoria" asp-items="categorias" class="form-select"></select>
+                    </div>
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label asp-for="Novo.EstoqueMinimoAlerta" class="form-label">Estoque mínimo <span class="small text-muted">(opcional)</span></label>
+                        <input asp-for="Novo.EstoqueMinimoAlerta" type="number" step="any" min="0" class="form-control" placeholder="avisa abaixo disso" />
+                    </div>
+                    <div class="col-6">
+                        <label asp-for="Novo.CustoPorUnidade" class="form-label">Custo por unidade <span class="small text-muted">(opcional)</span></label>
+                        <input asp-for="Novo.CustoPorUnidade" type="number" step="0.01" min="0" class="form-control" placeholder="R$ por kg/L/un" />
+                    </div>
+                </div>
+                <p class="small text-muted mt-2 mb-0">O estoque começa zerado; registre o que chegou no card do insumo.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Cadastrar</button>
+            </div>
         </form>
     </div>
 </div>
 
-<div class="dn-card p-3">
-    <h2 class="h6" style="color:var(--wine);">Saldo atual de insumos</h2>
-    <div class="table-responsive">
-        <table class="dn-table w-100">
-            <thead>
-                <tr>
-                    <th>Ingrediente</th>
-                    <th>Saldo</th>
-                    <th>Unidade</th>
-                    <th>Estoque mínimo</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var ingrediente in Model.Ingredientes)
-                {
-                    <tr>
-                        <td>@ingrediente.Nome</td>
-                        <td style="font-weight:600;">@ingrediente.SaldoAtual.ToString("N4")</td>
-                        <td>@ingrediente.UnidadeMedida</td>
-                        <td>@(ingrediente.EstoqueMinimoAlerta?.ToString("N4") ?? "-")</td>
-                    </tr>
-                }
-                @if (Model.Ingredientes.Count == 0)
-                {
-                    <tr>
-                        <td colspan="4" class="text-center" style="color:var(--ink-soft);">Nenhum ingrediente cadastrado.</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-</div>
+@section Scripts {
+    <script>
+        (function () {
+            var cards = document.querySelectorAll('.dn-insumo');
+            var chips = document.querySelectorAll('#filtro-categorias .dn-chip');
+            var busca = document.getElementById('busca-insumo');
+            var categoria = '';
+
+            function filtrar() {
+                var termo = busca.value.trim().toLowerCase();
+                var visiveis = 0;
+                cards.forEach(function (card) {
+                    var okCat = !categoria || (categoria === 'baixo' ? card.dataset.baixo === '1' : card.dataset.categoria === categoria);
+                    var okBusca = !termo || card.dataset.nome.indexOf(termo) >= 0;
+                    card.hidden = !(okCat && okBusca);
+                    if (!card.hidden) visiveis++;
+                });
+                document.getElementById('sem-resultado').hidden = visiveis > 0 || cards.length === 0;
+            }
+
+            chips.forEach(function (chip) {
+                chip.addEventListener('click', function () {
+                    chips.forEach(function (c) { c.classList.remove('ativo'); });
+                    chip.classList.add('ativo');
+                    categoria = chip.dataset.categoria;
+                    filtrar();
+                });
+            });
+            busca.addEventListener('input', filtrar);
+        })();
+    </script>
+}
