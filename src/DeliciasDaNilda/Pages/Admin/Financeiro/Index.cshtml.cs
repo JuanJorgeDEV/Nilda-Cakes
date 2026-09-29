@@ -13,7 +13,7 @@ public class IndexModel : AdminPageModelBase
         _financeiro = financeiro;
     }
 
-    /// <summary>7d, 30d (padrão), mes, mespassado, ano ou custom (usa De/Ate).</summary>
+    /// <summary>hoje, 7d, 30d (padrão), mes, mespassado, ano ou custom (usa De/Ate).</summary>
     [BindProperty(SupportsGet = true)]
     public string Periodo { get; set; } = "30d";
 
@@ -32,6 +32,7 @@ public class IndexModel : AdminPageModelBase
 
         var (inicio, fim) = Periodo switch
         {
+            "hoje" => (hoje, hoje),
             "7d" => (hoje.AddDays(-6), hoje),
             "mes" => (inicioMes, inicioMes.AddMonths(1).AddDays(-1)),
             "mespassado" => (inicioMes.AddMonths(-1), inicioMes.AddDays(-1)),

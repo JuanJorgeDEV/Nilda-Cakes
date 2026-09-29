@@ -8,7 +8,7 @@
     var cultura = new System.Globalization.CultureInfo("pt-BR");
     var periodos = new (string Id, string Rotulo)[]
     {
-        ("7d", "7 dias"), ("30d", "30 dias"), ("mes", "Este mês"), ("mespassado", "Mês passado"), ("ano", "Este ano")
+        ("hoje", "Hoje"), ("7d", "7 dias"), ("30d", "30 dias"), ("mes", "Este mês"), ("mespassado", "Mês passado"), ("ano", "Este ano")
     };
     var serieRotulos = r.Serie.Select(p => r.AgrupadoPorSemana ? $"sem {p.Inicio:dd/MM}" : p.Inicio.ToString("dd/MM")).ToList();
     var ordemDias = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday };
@@ -22,7 +22,7 @@
         dias = ordemDias.Select(d => cultura.DateTimeFormat.GetAbbreviatedDayName(d).TrimEnd('.')),
         pedidosDia = ordemDias.Select(d => r.PedidosPorDiaDaSemana.GetValueOrDefault(d))
     };
-    var maiorLucroSabor = r.Sabores.Count > 0 ? r.Sabores.Max(s => Math.Abs(s.Lucro)) : 0m;
+    var maisPedido = r.Sabores.Count > 0 ? r.Sabores.Max(s => s.Pedidos) : 0;
     var maiorForma = r.RecebidoPorForma.Count > 0 ? r.RecebidoPorForma.Values.Max() : 0m;
     var melhorDia = r.PedidosPorDiaDaSemana.OrderByDescending(kv => kv.Value).FirstOrDefault();
 }
@@ -62,12 +62,12 @@
     <div class="dn-kpi">
         <span class="dn-kpi-rotulo">Custo dos bolos@(r.CustoIncompleto ? "*" : "")</span>
         <span class="dn-kpi-valor">@r.CustoBolos.ToString("C")</span>
-        <span class="dn-kpi-sub">insumos + custo extra</span>
+        <span class="dn-kpi-sub">dos bolos vendidos, com insumos e custo extra</span>
     </div>
     <div class="dn-kpi">
         <span class="dn-kpi-rotulo">Recebido no caixa</span>
         <span class="dn-kpi-valor">@r.Recebido.ToString("C")</span>
-        <span class="dn-kpi-sub">pagamentos no período</span>
+        <span class="dn-kpi-sub">pagamentos no período@(r.RecebidoDePedidosNaoConfirmados > 0 ? $" · {r.RecebidoDePedidosNaoConfirmados:C} de pedidos ainda a confirmar" : "")</span>
     </div>
     <div class="dn-kpi">
         <span class="dn-kpi-rotulo">Ticket médio</span>
@@ -90,19 +90,19 @@
 {
     <p class="small mb-3" style="color:var(--warn);">
         * Algum sabor vendido tem ingrediente sem custo cadastrado, então o custo está abaixo do real.
-        <a asp-page="/Admin/Insumos/Index">Cadastrar custos no estoque</a>
+        <a asp-page="/Admin/Insumos/Index" class="btn btn-outline-warning btn-sm ms-1">Cadastrar custos no estoque</a>
     </p>
 }
 
 <div class="dn-graficos mb-3">
     <section class="dn-card p-3 dn-grafico-largo">
         <h2 class="h6 dn-secao-titulo mb-1">Vendas, custo e lucro por @(r.AgrupadoPorSemana ? "semana" : "dia")</h2>
-        <p class="small mb-2" style="color:var(--ink-soft);">Pela data de entrega dos pedidos confirmados e entregues.</p>
+        <p class="small mb-2" style="color:var(--ink-soft);">Pelo dia em que cada pedido foi confirmado.</p>
         <div class="dn-grafico-area"><canvas id="grafico-serie" aria-label="Gráfico de vendas, custo e lucro" role="img"></canvas></div>
     </section>
 
     <section class="dn-card p-3">
-        <h2 class="h6 dn-secao-titulo mb-1">Bolos por dia da semana</h2>
+        <h2 class="h6 dn-secao-titulo mb-1">Entregas por dia da semana</h2>
         <p class="small mb-2" style="color:var(--ink-soft);">
             @if (melhorDia.Value > 0)
             {
@@ -138,27 +138,27 @@
 </div>
 
 <section class="dn-card p-3">
-    <h2 class="h6 dn-secao-titulo mb-1">Lucro por sabor</h2>
-    <p class="small mb-2" style="color:var(--ink-soft);">Do mais lucrativo para o menos, no período.</p>
+    <h2 class="h6 dn-secao-titulo mb-1">Sabores mais pedidos</h2>
+    <p class="small mb-2" style="color:var(--ink-soft);">Quantos bolos de cada sabor foram vendidos no período.</p>
     @if (r.Sabores.Count == 0)
     {
         <p class="small mb-0" style="color:var(--ink-soft);">Sem vendas no período.</p>
     }
     else
     {
-        <ul class="dn-barras dn-barras-sabor">
+        <ol class="dn-barras dn-barras-sabor dn-ranking">
             @foreach (var s in r.Sabores)
             {
                 <li>
                     <div class="dn-barras-topo">
-                        <span><strong>@s.Sabor</strong> · @s.Pedidos @(s.Pedidos == 1 ? "bolo" : "bolos"), @QuantidadeFormatter.Formatar(s.Kg, "kg")</span>
-                        <span><strong>@s.Lucro.ToString("C")</strong> <small class="@(s.Margem >= 0.5m ? "dn-stat-ok" : s.Margem >= 0.3m ? "dn-stat-warn" : "dn-stat-danger")">@s.Margem.ToString("P0")</small></span>
+                        <span><strong>@s.Sabor</strong></span>
+                        <span><strong>@s.Pedidos</strong> @(s.Pedidos == 1 ? "pedido" : "pedidos")</span>
                     </div>
-                    <div class="dn-barra"><span style="width:@(maiorLucroSabor > 0 ? (int)(Math.Abs(s.Lucro) / maiorLucroSabor * 100) : 0)%"></span></div>
-                    <div class="dn-barras-sub">vendeu @s.Vendas.ToString("C") · custou @s.Custo.ToString("C")</div>
+                    <div class="dn-barra"><span style="width:@(maisPedido > 0 ? (int)Math.Round(s.Pedidos * 100.0 / maisPedido) : 0)%"></span></div>
+                    <div class="dn-barras-sub">@QuantidadeFormatter.Formatar(s.Kg, "kg") no total · @s.Vendas.ToString("C") em vendas</div>
                 </li>
             }
-        </ul>
+        </ol>
     }
 </section>
 

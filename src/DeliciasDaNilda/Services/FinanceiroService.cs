@@ -20,10 +20,12 @@ public sealed record DesempenhoSabor(string Sabor, int Pedidos, decimal Kg, deci
 }
 
 /// <summary>
-/// Painel financeiro de um período. "Vendas" usa os pedidos confirmados ou
-/// entregues com entrega no período (competência); "Recebido" usa os
-/// pagamentos registrados no período (caixa, RN10). Custos são ESTIMADOS com
-/// o custo atual dos insumos — não há histórico de preço de compra.
+/// Painel financeiro de um período. "Vendas" usa os pedidos confirmados (ou
+/// já entregues) na data da CONFIRMAÇÃO — o momento em que a venda vira
+/// compromisso e o estoque é abatido (RN08/RN12) —, com o custo do bolo
+/// contado junto. "Recebido" usa os pagamentos registrados no período (caixa,
+/// RN10). Custos são ESTIMADOS com o custo atual dos insumos — não há
+/// histórico de preço de compra.
 /// </summary>
 public sealed record ResumoFinanceiro(
     DateOnly Inicio,
@@ -40,7 +42,8 @@ public sealed record ResumoFinanceiro(
     IReadOnlyList<DesempenhoSabor> Sabores,
     IReadOnlyDictionary<DayOfWeek, int> PedidosPorDiaDaSemana,
     IReadOnlyDictionary<string, decimal> RecebidoPorForma,
-    bool CustoIncompleto)
+    bool CustoIncompleto,
+    decimal RecebidoDePedidosNaoConfirmados = 0m)
 {
     public decimal LucroBruto => Vendas - CustoBolos;
 
@@ -85,7 +88,7 @@ public class FinanceiroService : IFinanceiroService
 
         var pedidos = await _db.Pedidos
             .AsNoTracking()
-            .Where(p => p.DataEntrega >= inicio && p.DataEntrega <= fim && StatusVendidos.Contains(p.StatusPedido))
+            .Where(p => p.ConfirmadoEm >= inicioUtc && p.ConfirmadoEm < fimUtc && StatusVendidos.Contains(p.StatusPedido))
             .Include(p => p.Sabor)
                 .ThenInclude(s => s.FichaTecnica!)
                     .ThenInclude(f => f.Itens)
@@ -95,7 +98,7 @@ public class FinanceiroService : IFinanceiroService
         var pagamentos = await _db.Pagamentos
             .AsNoTracking()
             .Where(p => p.CriadoEm >= inicioUtc && p.CriadoEm < fimUtc)
-            .Select(p => new { p.Valor, p.FormaPagamento, p.CriadoEm })
+            .Select(p => new { p.Valor, p.FormaPagamento, p.CriadoEm, PedidoPendente = p.Pedido.StatusPedido == StatusPedido.PendenteConfirmacao })
             .ToListAsync(ct);
 
         var perdas = await _db.MovimentosEstoque
@@ -123,8 +126,9 @@ public class FinanceiroService : IFinanceiroService
 
         foreach (var p in pedidos)
         {
-            var b = baldes.GetValueOrDefault(Balde(p.DataEntrega));
-            baldes[Balde(p.DataEntrega)] = (b.Vendas + p.ValorTotal, b.Custo + CustoDoPedido(p), b.Recebido, b.Pedidos + 1);
+            var diaVenda = Balde(DateOnly.FromDateTime(p.ConfirmadoEm!.Value.ToLocalTime()));
+            var b = baldes.GetValueOrDefault(diaVenda);
+            baldes[diaVenda] = (b.Vendas + p.ValorTotal, b.Custo + CustoDoPedido(p), b.Recebido, b.Pedidos + 1);
         }
 
         foreach (var pg in pagamentos)
@@ -139,7 +143,8 @@ public class FinanceiroService : IFinanceiroService
         var sabores = pedidos
             .GroupBy(p => p.Sabor.Nome)
             .Select(g => new DesempenhoSabor(g.Key, g.Count(), g.Sum(p => p.Peso), g.Sum(p => p.ValorTotal), g.Sum(CustoDoPedido)))
-            .OrderByDescending(s => s.Lucro)
+            .OrderByDescending(s => s.Pedidos)
+            .ThenByDescending(s => s.Kg)
             .ToList();
 
         var porDiaSemana = Enum.GetValues<DayOfWeek>().ToDictionary(d => d, d => pedidos.Count(p => p.DataEntrega.DayOfWeek == d));
@@ -163,6 +168,7 @@ public class FinanceiroService : IFinanceiroService
             Sabores: sabores,
             PedidosPorDiaDaSemana: porDiaSemana,
             RecebidoPorForma: porForma,
-            CustoIncompleto: pedidos.Any(p => SaborService.CustoIncompleto(p.Sabor)));
+            CustoIncompleto: pedidos.Any(p => SaborService.CustoIncompleto(p.Sabor)),
+            RecebidoDePedidosNaoConfirmados: pagamentos.Where(p => p.PedidoPendente).Sum(p => p.Valor));
     }
 }

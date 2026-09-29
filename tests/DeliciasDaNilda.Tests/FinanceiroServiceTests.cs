@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DeliciasDaNilda.Tests;
 
-/// <summary>RN10 — painel financeiro: vendas por competência, recebido por caixa, custo estimado pela ficha.</summary>
+/// <summary>RN10 — painel financeiro: vendas na data da confirmação, recebido por caixa, custo estimado pela ficha.</summary>
 public class FinanceiroServiceTests
 {
     private static AppDbContext CriarContexto() =>
@@ -32,10 +32,12 @@ public class FinanceiroServiceTests
         return (sabor, cliente, choc, adm);
     }
 
-    private static Pedido NovoPedido(Sabor s, Cliente c, decimal kg, DateOnly entrega, StatusPedido status) => new()
+    // confirmadoHaDias: null = nunca confirmado.
+    private static Pedido NovoPedido(Sabor s, Cliente c, decimal kg, DateOnly entrega, StatusPedido status, int? confirmadoHaDias = null) => new()
     {
         ClienteId = c.Id, SaborId = s.Id, Peso = kg, PrecoPorKgUtilizado = s.PrecoPorKg, ValorTotal = kg * s.PrecoPorKg,
-        DataEntrega = entrega, StatusPedido = status, CriadoEm = DateTime.UtcNow
+        DataEntrega = entrega, StatusPedido = status, CriadoEm = DateTime.UtcNow,
+        ConfirmadoEm = confirmadoHaDias is { } dias ? DateTime.UtcNow.AddDays(-dias) : null
     };
 
     [Fact]
@@ -44,11 +46,11 @@ public class FinanceiroServiceTests
         await using var db = CriarContexto();
         var (sabor, cliente, _, _) = await SeedAsync(db);
         db.Pedidos.AddRange(
-            NovoPedido(sabor, cliente, 2m, Hoje, StatusPedido.Concluido),           // R$ 200, custo 50
-            NovoPedido(sabor, cliente, 1m, Hoje.AddDays(-3), StatusPedido.Confirmado), // R$ 100, custo 25
-            NovoPedido(sabor, cliente, 5m, Hoje, StatusPedido.PendenteConfirmacao),  // fora: não vendido
-            NovoPedido(sabor, cliente, 5m, Hoje, StatusPedido.Cancelado),            // fora
-            NovoPedido(sabor, cliente, 5m, Hoje.AddDays(-60), StatusPedido.Concluido)); // fora do período
+            NovoPedido(sabor, cliente, 2m, Hoje, StatusPedido.Concluido, confirmadoHaDias: 0),            // R$ 200, custo 50
+            NovoPedido(sabor, cliente, 1m, Hoje.AddDays(-3), StatusPedido.Confirmado, confirmadoHaDias: 3), // R$ 100, custo 25
+            NovoPedido(sabor, cliente, 5m, Hoje, StatusPedido.PendenteConfirmacao),                       // fora: não vendido
+            NovoPedido(sabor, cliente, 5m, Hoje, StatusPedido.Cancelado, confirmadoHaDias: 1),            // fora
+            NovoPedido(sabor, cliente, 5m, Hoje, StatusPedido.Concluido, confirmadoHaDias: 60));          // fora: confirmado antes do período
         await db.SaveChangesAsync();
 
         var r = await new FinanceiroService(db).ResumirAsync(Hoje.AddDays(-6), Hoje);
@@ -73,7 +75,7 @@ public class FinanceiroServiceTests
     {
         await using var db = CriarContexto();
         var (sabor, cliente, choc, adm) = await SeedAsync(db);
-        var pedido = NovoPedido(sabor, cliente, 2m, Hoje.AddDays(10), StatusPedido.Confirmado); // entrega fora do período
+        var pedido = NovoPedido(sabor, cliente, 2m, Hoje.AddDays(10), StatusPedido.PendenteConfirmacao); // ainda a confirmar
         db.Pedidos.Add(pedido);
         await db.SaveChangesAsync();
         db.Pagamentos.AddRange(
@@ -84,11 +86,49 @@ public class FinanceiroServiceTests
 
         var r = await new FinanceiroService(db).ResumirAsync(Hoje.AddDays(-29), Hoje);
 
-        Assert.Equal(0m, r.Vendas);
+        Assert.Equal(0m, r.Vendas);                   // pendente ainda não é venda
         Assert.Equal(80m, r.Recebido);                // o de 90 dias atrás não entra
+        Assert.Equal(80m, r.RecebidoDePedidosNaoConfirmados);
         Assert.Equal(80m, r.RecebidoPorForma["Pix"]);
         Assert.Equal(20m, r.Perdas);                  // 0,5 kg × R$ 40
         Assert.Equal(100m, r.AReceber);               // 200 − 80 − 20
+    }
+
+    [Fact]
+    public async Task VendaConfirmadaHoje_ComEntregaFutura_ContaNoDiaComOCustoDoBolo()
+    {
+        await using var db = CriarContexto();
+        var (sabor, cliente, _, _) = await SeedAsync(db);
+        db.Pedidos.Add(NovoPedido(sabor, cliente, 10m, Hoje.AddDays(20), StatusPedido.Confirmado, confirmadoHaDias: 0)); // R$ 1000, custo 250
+
+        await db.SaveChangesAsync();
+
+        var r = await new FinanceiroService(db).ResumirAsync(Hoje, Hoje);
+
+        Assert.Equal(1000m, r.Vendas);
+        Assert.Equal(250m, r.CustoBolos);
+        Assert.Equal(750m, r.LucroBruto);
+        Assert.Single(r.Serie);
+    }
+
+    [Fact]
+    public async Task Sabores_VemOrdenadosPeloMaisPedido()
+    {
+        await using var db = CriarContexto();
+        var (sabor, cliente, _, _) = await SeedAsync(db);
+        var outro = new Sabor { Nome = "Oreo", PrecoPorKg = 90m, CriadoEm = DateTime.UtcNow };
+        db.Sabores.Add(outro);
+        await db.SaveChangesAsync();
+        db.Pedidos.AddRange(
+            NovoPedido(outro, cliente, 1m, Hoje, StatusPedido.Confirmado, confirmadoHaDias: 0),
+            NovoPedido(sabor, cliente, 5m, Hoje, StatusPedido.Confirmado, confirmadoHaDias: 0),
+            NovoPedido(sabor, cliente, 5m, Hoje, StatusPedido.Confirmado, confirmadoHaDias: 0));
+        await db.SaveChangesAsync();
+
+        var r = await new FinanceiroService(db).ResumirAsync(Hoje, Hoje);
+
+        Assert.Equal(new[] { "Trufado", "Oreo" }, r.Sabores.Select(x => x.Sabor));
+        Assert.Equal(2, r.Sabores[0].Pedidos);
     }
 
     [Fact]
