@@ -1121,3 +1121,46 @@ h1, h2, h3, .dn-title {
 .dn-movimentos .entrada .dn-mov-qtd { color: var(--ok); }
 .dn-movimentos .perda .dn-mov-qtd { color: var(--danger); }
 .dn-movimentos .saida .dn-mov-qtd { color: var(--ink-soft); }
+
+/* Financeiro -----------------------------------------------------------------*/
+
+.dn-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+.dn-kpi {
+  background: #fff;
+  border: 1px solid var(--cream-2);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dn-kpi.destaque { background: var(--wine); border-color: var(--wine); color: #fff; grid-row: span 1; }
+.dn-kpi-rotulo { font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-soft); }
+.dn-kpi-valor { font-size: 21px; font-weight: 700; color: var(--ink); }
+.dn-kpi-sub { font-size: 12px; color: var(--ink-soft); }
+.dn-kpi.destaque .dn-kpi-rotulo, .dn-kpi.destaque .dn-kpi-sub { color: rgba(255, 255, 255, .8); }
+.dn-kpi.destaque .dn-kpi-valor { color: #fff; font-size: 24px; }
+
+.dn-graficos { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.dn-grafico-largo { grid-column: 1 / -1; }
+.dn-grafico-area { position: relative; height: 280px; }
+.dn-grafico-area.pequeno { height: 200px; }
+
+.dn-barras { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.dn-barras-topo { display: flex; justify-content: space-between; gap: 10px; font-size: 13.5px; margin-bottom: 4px; }
+.dn-barras-sub { font-size: 12px; color: var(--ink-soft); margin-top: 3px; }
+.dn-barra { height: 8px; border-radius: 999px; background: var(--cream-2); overflow: hidden; }
+.dn-barra span { display: block; height: 100%; border-radius: 999px; background: var(--rose); }
+.dn-barras-sabor .dn-barra span { background: var(--wine); }
+
+@media (max-width: 768px) {
+  .dn-graficos { grid-template-columns: 1fr; }
+  .dn-kpis { grid-template-columns: 1fr 1fr; }
+  .dn-kpi.destaque { grid-column: 1 / -1; }
+  .dn-kpi-valor { font-size: 18px; }
+  .dn-grafico-area { height: 230px; }
+}

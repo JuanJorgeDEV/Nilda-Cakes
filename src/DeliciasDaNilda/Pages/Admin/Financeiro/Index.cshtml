@@ -1,11 +1,213 @@
 @page
+@using System.Text.Json
+@using DeliciasDaNilda.Services.Common
 @model DeliciasDaNilda.Pages.Admin.Financeiro.IndexModel
 @{
     ViewData["Title"] = "Financeiro";
+    var r = Model.Resumo;
+    var cultura = new System.Globalization.CultureInfo("pt-BR");
+    var periodos = new (string Id, string Rotulo)[]
+    {
+        ("7d", "7 dias"), ("30d", "30 dias"), ("mes", "Este mês"), ("mespassado", "Mês passado"), ("ano", "Este ano")
+    };
+    var serieRotulos = r.Serie.Select(p => r.AgrupadoPorSemana ? $"sem {p.Inicio:dd/MM}" : p.Inicio.ToString("dd/MM")).ToList();
+    var ordemDias = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday };
+    var dados = new
+    {
+        rotulos = serieRotulos,
+        vendas = r.Serie.Select(p => p.Vendas),
+        custo = r.Serie.Select(p => p.Custo),
+        lucro = r.Serie.Select(p => p.Lucro),
+        recebido = r.Serie.Select(p => p.Recebido),
+        dias = ordemDias.Select(d => cultura.DateTimeFormat.GetAbbreviatedDayName(d).TrimEnd('.')),
+        pedidosDia = ordemDias.Select(d => r.PedidosPorDiaDaSemana.GetValueOrDefault(d))
+    };
+    var maiorLucroSabor = r.Sabores.Count > 0 ? r.Sabores.Max(s => Math.Abs(s.Lucro)) : 0m;
+    var maiorForma = r.RecebidoPorForma.Count > 0 ? r.RecebidoPorForma.Values.Max() : 0m;
+    var melhorDia = r.PedidosPorDiaDaSemana.OrderByDescending(kv => kv.Value).FirstOrDefault();
 }
 
-<h1 class="h4 mb-3">Financeiro</h1>
-
-<div class="dn-card p-4 text-center" style="color:var(--ink-soft);">
-    O painel financeiro (receita, custos, lucro e ROI) está em construção.
+<div class="d-flex justify-content-between align-items-baseline flex-wrap gap-2 mb-3">
+    <h1 class="h4 mb-0">Financeiro</h1>
+    <span class="small" style="color:var(--ink-soft);">@r.Inicio.ToString("dd/MM/yyyy") a @r.Fim.ToString("dd/MM/yyyy")</span>
 </div>
+
+<div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+    <nav class="dn-chips" aria-label="Período">
+        @foreach (var p in periodos)
+        {
+            <a asp-route-periodo="@p.Id" class="dn-chip @(Model.Periodo == p.Id ? "ativo" : "")">@p.Rotulo</a>
+        }
+    </nav>
+    <form method="get" class="d-flex gap-1 align-items-center ms-md-auto">
+        <input type="hidden" name="periodo" value="custom" />
+        <input type="date" name="de" value="@Model.De?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" aria-label="De" />
+        <span class="small">até</span>
+        <input type="date" name="ate" value="@Model.Ate?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" aria-label="Até" />
+        <button type="submit" class="btn btn-outline-secondary btn-sm">Ver</button>
+    </form>
+</div>
+
+<div class="dn-kpis mb-3">
+    <div class="dn-kpi destaque">
+        <span class="dn-kpi-rotulo">Lucro bruto</span>
+        <span class="dn-kpi-valor">@r.LucroBruto.ToString("C")</span>
+        <span class="dn-kpi-sub">margem @r.Margem.ToString("P0") · ROI @r.Roi.ToString("P0")</span>
+    </div>
+    <div class="dn-kpi">
+        <span class="dn-kpi-rotulo">Vendas</span>
+        <span class="dn-kpi-valor">@r.Vendas.ToString("C")</span>
+        <span class="dn-kpi-sub">@r.PedidosVendidos @(r.PedidosVendidos == 1 ? "bolo" : "bolos") · @QuantidadeFormatter.Formatar(r.KgVendidos, "kg")</span>
+    </div>
+    <div class="dn-kpi">
+        <span class="dn-kpi-rotulo">Custo dos bolos@(r.CustoIncompleto ? "*" : "")</span>
+        <span class="dn-kpi-valor">@r.CustoBolos.ToString("C")</span>
+        <span class="dn-kpi-sub">insumos + custo extra</span>
+    </div>
+    <div class="dn-kpi">
+        <span class="dn-kpi-rotulo">Recebido no caixa</span>
+        <span class="dn-kpi-valor">@r.Recebido.ToString("C")</span>
+        <span class="dn-kpi-sub">pagamentos no período</span>
+    </div>
+    <div class="dn-kpi">
+        <span class="dn-kpi-rotulo">Ticket médio</span>
+        <span class="dn-kpi-valor">@r.TicketMedio.ToString("C")</span>
+        <span class="dn-kpi-sub">por bolo</span>
+    </div>
+    <div class="dn-kpi">
+        <span class="dn-kpi-rotulo">A receber</span>
+        <span class="dn-kpi-valor">@r.AReceber.ToString("C")</span>
+        <span class="dn-kpi-sub">de pedidos em aberto</span>
+    </div>
+    <div class="dn-kpi">
+        <span class="dn-kpi-rotulo">Perdas de estoque</span>
+        <span class="dn-kpi-valor @(r.Perdas > 0 ? "dn-stat-danger" : "")">@r.Perdas.ToString("C")</span>
+        <span class="dn-kpi-sub">resultado @r.Resultado.ToString("C")</span>
+    </div>
+</div>
+
+@if (r.CustoIncompleto)
+{
+    <p class="small mb-3" style="color:var(--warn);">
+        * Algum sabor vendido tem ingrediente sem custo cadastrado, então o custo está abaixo do real.
+        <a asp-page="/Admin/Insumos/Index">Cadastrar custos no estoque</a>
+    </p>
+}
+
+<div class="dn-graficos mb-3">
+    <section class="dn-card p-3 dn-grafico-largo">
+        <h2 class="h6 dn-secao-titulo mb-1">Vendas, custo e lucro por @(r.AgrupadoPorSemana ? "semana" : "dia")</h2>
+        <p class="small mb-2" style="color:var(--ink-soft);">Pela data de entrega dos pedidos confirmados e entregues.</p>
+        <div class="dn-grafico-area"><canvas id="grafico-serie" aria-label="Gráfico de vendas, custo e lucro" role="img"></canvas></div>
+    </section>
+
+    <section class="dn-card p-3">
+        <h2 class="h6 dn-secao-titulo mb-1">Bolos por dia da semana</h2>
+        <p class="small mb-2" style="color:var(--ink-soft);">
+            @if (melhorDia.Value > 0)
+            {
+                <span>Dia mais vendido: <strong>@cultura.DateTimeFormat.GetDayName(melhorDia.Key)</strong></span>
+            }
+            else
+            {
+                <span>Sem vendas no período.</span>
+            }
+        </p>
+        <div class="dn-grafico-area pequeno"><canvas id="grafico-dias" aria-label="Pedidos por dia da semana" role="img"></canvas></div>
+    </section>
+
+    <section class="dn-card p-3">
+        <h2 class="h6 dn-secao-titulo mb-2">Recebido por forma de pagamento</h2>
+        @if (r.RecebidoPorForma.Count == 0)
+        {
+            <p class="small mb-0" style="color:var(--ink-soft);">Nenhum pagamento no período.</p>
+        }
+        else
+        {
+            <ul class="dn-barras">
+                @foreach (var (forma, valor) in r.RecebidoPorForma.OrderByDescending(kv => kv.Value))
+                {
+                    <li>
+                        <div class="dn-barras-topo"><span>@forma</span><strong>@valor.ToString("C")</strong></div>
+                        <div class="dn-barra"><span style="width:@((int)(valor / maiorForma * 100))%"></span></div>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+</div>
+
+<section class="dn-card p-3">
+    <h2 class="h6 dn-secao-titulo mb-1">Lucro por sabor</h2>
+    <p class="small mb-2" style="color:var(--ink-soft);">Do mais lucrativo para o menos, no período.</p>
+    @if (r.Sabores.Count == 0)
+    {
+        <p class="small mb-0" style="color:var(--ink-soft);">Sem vendas no período.</p>
+    }
+    else
+    {
+        <ul class="dn-barras dn-barras-sabor">
+            @foreach (var s in r.Sabores)
+            {
+                <li>
+                    <div class="dn-barras-topo">
+                        <span><strong>@s.Sabor</strong> · @s.Pedidos @(s.Pedidos == 1 ? "bolo" : "bolos"), @QuantidadeFormatter.Formatar(s.Kg, "kg")</span>
+                        <span><strong>@s.Lucro.ToString("C")</strong> <small class="@(s.Margem >= 0.5m ? "dn-stat-ok" : s.Margem >= 0.3m ? "dn-stat-warn" : "dn-stat-danger")">@s.Margem.ToString("P0")</small></span>
+                    </div>
+                    <div class="dn-barra"><span style="width:@(maiorLucroSabor > 0 ? (int)(Math.Abs(s.Lucro) / maiorLucroSabor * 100) : 0)%"></span></div>
+                    <div class="dn-barras-sub">vendeu @s.Vendas.ToString("C") · custou @s.Custo.ToString("C")</div>
+                </li>
+            }
+        </ul>
+    }
+</section>
+
+<p class="small mt-3" style="color:var(--ink-soft);">
+    Custos estimados com o preço atual dos insumos cadastrado no estoque. ROI = lucro bruto ÷ custo dos bolos.
+</p>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        (function () {
+            if (!window.Chart) return;
+            var dados = @Html.Raw(JsonSerializer.Serialize(dados));
+            var moeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+            Chart.defaults.font.family = 'Poppins, sans-serif';
+            Chart.defaults.color = '#7A5C60';
+
+            new Chart(document.getElementById('grafico-serie'), {
+                data: {
+                    labels: dados.rotulos,
+                    datasets: [
+                        { type: 'bar', label: 'Vendas', data: dados.vendas, backgroundColor: '#C97C90', borderRadius: 4, order: 2 },
+                        { type: 'bar', label: 'Custo', data: dados.custo, backgroundColor: '#EFDCA9', borderRadius: 4, order: 3 },
+                        { type: 'line', label: 'Lucro', data: dados.lucro, borderColor: '#7A2038', backgroundColor: '#7A2038', tension: .3, pointRadius: 3, order: 1 }
+                    ]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12 } },
+                        tooltip: { callbacks: { label: function (c) { return c.dataset.label + ': ' + moeda.format(c.parsed.y); } } }
+                    },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { beginAtZero: true, grid: { color: '#F3E6D8' }, ticks: { callback: function (v) { return moeda.format(v); } } }
+                    }
+                }
+            });
+
+            new Chart(document.getElementById('grafico-dias'), {
+                type: 'bar',
+                data: { labels: dados.dias, datasets: [{ label: 'Bolos', data: dados.pedidosDia, backgroundColor: '#7A2038', borderRadius: 4 }] },
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#F3E6D8' } } }
+                }
+            });
+        })();
+    </script>
+}
