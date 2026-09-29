@@ -22,10 +22,8 @@
         StatusPedido.Concluido => "concluido",
         _ => "confirmado"
     };
-    bool NaGrade(DeliciasDaNilda.Domain.Entities.Pedido p) =>
-        p.HorarioRetirada is { } h && h.Hour >= IndexModel.HoraInicio && h.Hour < IndexModel.HoraFim;
     var dia = Model.DiaSelecionado;
-    var pedidosDoDia = Model.PedidosDaSemana[dia].ToList();
+    var pedidosDoDia = Model.PedidosDoDia(dia);
     var ocupacaoDia = Model.Ocupacao(dia);
 }
 
@@ -65,7 +63,7 @@
         @foreach (var d in Model.DiasDaSemana)
         {
             <div class="dn-cal-col">
-                @foreach (var p in Model.PedidosDaSemana[d].Where(p => !NaGrade(p)))
+                @foreach (var p in Model.PedidosDoDia(d).Where(p => p.HorarioRetirada is null))
                 {
                     <a asp-route-dia="@d.ToString("yyyy-MM-dd")" asp-route-aberto="@p.Id" asp-fragment="card-pedido-@p.Id" class="dn-evento @Classe(p.StatusPedido)" title="@p.Cliente.NomeCompleto — @p.Sabor.Nome">
                         @p.Cliente.NomeCompleto.Split(' ')[0] · @p.Sabor.Nome
@@ -75,28 +73,28 @@
         }
     </div>
     <div class="dn-cal-rolagem">
-    <div class="dn-cal-corpo" style="height:@((IndexModel.HoraFim - IndexModel.HoraInicio) * alturaHora)px;">
+    <div class="dn-cal-corpo" style="height:@((Model.HoraFim - Model.HoraInicio) * alturaHora)px;">
         <div class="dn-cal-horas">
-            @for (var h = IndexModel.HoraInicio; h < IndexModel.HoraFim; h++)
+            @for (var h = Model.HoraInicio; h < Model.HoraFim; h++)
             {
-                <span style="top:@((h - IndexModel.HoraInicio) * alturaHora)px;">@h:00</span>
+                <span style="top:@((h - Model.HoraInicio) * alturaHora)px;">@h:00</span>
             }
         </div>
         @foreach (var d in Model.DiasDaSemana)
         {
             <div class="dn-cal-col dn-cal-grade @(d == Model.Hoje ? "hoje" : "")">
-                @foreach (var p in Model.PedidosDaSemana[d].Where(NaGrade))
+                @foreach (var (p, coluna, colunas) in Model.PosicionarNaGrade(d))
                 {
                     var h = p.HorarioRetirada!.Value;
-                    var topo = ((h.Hour - IndexModel.HoraInicio) * 60 + h.Minute) * alturaHora / 60;
-                    <a asp-route-dia="@d.ToString("yyyy-MM-dd")" asp-route-aberto="@p.Id" asp-fragment="card-pedido-@p.Id" class="dn-evento dn-evento-hora @Classe(p.StatusPedido)" style="top:@(topo)px;">
+                    var topo = ((h.Hour - Model.HoraInicio) * 60 + h.Minute) * alturaHora / 60;
+                    <a asp-route-dia="@d.ToString("yyyy-MM-dd")" asp-route-aberto="@p.Id" asp-fragment="card-pedido-@p.Id" class="dn-evento dn-evento-hora @Classe(p.StatusPedido)" style="top:@(topo)px;left:calc(@(coluna * 100 / colunas)% + 3px);width:calc(@(100 / colunas)% - 6px);right:auto;">
                         <strong>@h.ToString("HH:mm")</strong> @p.Cliente.NomeCompleto.Split(' ')[0]
                         <span>@p.Sabor.Nome · @QuantidadeFormatter.Formatar(p.Peso, "kg")</span>
                     </a>
                 }
-                @if (d == Model.Hoje && DateTime.Now.Hour >= IndexModel.HoraInicio && DateTime.Now.Hour < IndexModel.HoraFim)
+                @if (d == Model.Hoje && DateTime.Now.Hour >= Model.HoraInicio && DateTime.Now.Hour < Model.HoraFim)
                 {
-                    var agora = ((DateTime.Now.Hour - IndexModel.HoraInicio) * 60 + DateTime.Now.Minute) * alturaHora / 60;
+                    var agora = ((DateTime.Now.Hour - Model.HoraInicio) * 60 + DateTime.Now.Minute) * alturaHora / 60;
                     <div class="dn-cal-agora" style="top:@(agora)px;"></div>
                 }
             </div>

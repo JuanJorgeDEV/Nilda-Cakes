@@ -14,8 +14,10 @@ namespace DeliciasDaNilda.Pages.Admin.Agenda;
 /// </summary>
 public class IndexModel : AdminPageModelBase
 {
-    public const int HoraInicio = 7;
-    public const int HoraFim = 20;
+    /// <summary>Faixa de horas da grade: 7h–20h, ampliada se algum pedido cair fora dela.</summary>
+    public int HoraInicio { get; private set; } = 7;
+
+    public int HoraFim { get; private set; } = 20;
 
     private readonly AppDbContext _db;
     private readonly IAgendaService _agendaService;
@@ -59,6 +61,51 @@ public class IndexModel : AdminPageModelBase
     public IReadOnlyDictionary<int, IReadOnlyList<FaltaIngrediente>> Faltas { get; private set; }
         = new Dictionary<int, IReadOnlyList<FaltaIngrediente>>();
 
+    /// <summary>
+    /// Pedidos do dia na ordem em que acontecem: os com horário de retirada
+    /// por hora, e por último os "a combinar".
+    /// </summary>
+    public List<Pedido> PedidosDoDia(DateOnly dia) => PedidosDaSemana[dia]
+        .OrderBy(p => p.HorarioRetirada is null ? 1 : 0)
+        .ThenBy(p => p.HorarioRetirada)
+        .ThenBy(p => p.Id)
+        .ToList();
+
+    /// <summary>
+    /// Posição de cada pedido com horário na grade do dia: pedidos que
+    /// acontecem com menos de 1 hora de diferença ficam lado a lado (coluna
+    /// e total de colunas), em vez de um cobrir o outro.
+    /// </summary>
+    public List<(Pedido Pedido, int Coluna, int Colunas)> PosicionarNaGrade(DateOnly dia)
+    {
+        var itens = PedidosDoDia(dia).Where(p => p.HorarioRetirada is not null).ToList();
+        var resultado = new List<(Pedido, int, int)>();
+        var grupo = new List<Pedido>();
+
+        void FecharGrupo()
+        {
+            for (var i = 0; i < grupo.Count; i++)
+            {
+                resultado.Add((grupo[i], i, grupo.Count));
+            }
+
+            grupo.Clear();
+        }
+
+        foreach (var p in itens)
+        {
+            if (grupo.Count > 0 && (p.HorarioRetirada!.Value - grupo[^1].HorarioRetirada!.Value).TotalMinutes >= 60)
+            {
+                FecharGrupo();
+            }
+
+            grupo.Add(p);
+        }
+
+        FecharGrupo();
+        return resultado;
+    }
+
     /// <summary>RN06/RN07: pedidos que ocupam a capacidade do dia.</summary>
     public int Ocupacao(DateOnly dia) => PedidosDaSemana[dia].Count(p => AgendamentoService.StatusQueOcupamCapacidade.Contains(p.StatusPedido));
 
@@ -79,6 +126,13 @@ public class IndexModel : AdminPageModelBase
             .ThenBy(p => p.Id)
             .ToListAsync(ct);
         PedidosDaSemana = pedidos.ToLookup(p => p.DataEntrega);
+
+        var horas = pedidos.Where(p => p.HorarioRetirada is not null).Select(p => p.HorarioRetirada!.Value.Hour).ToList();
+        if (horas.Count > 0)
+        {
+            HoraInicio = Math.Min(7, horas.Min());
+            HoraFim = Math.Min(24, Math.Max(20, horas.Max() + 1));
+        }
 
         // RN16: ficha técnica total do dia escolhido, com saldo em estoque.
         AgendaDoDia = await _agendaService.ObterAgendaDoDiaAsync(DiaSelecionado, ct);
