@@ -635,3 +635,12 @@ h1, h2, h3, .dn-title {
 }
 
 .dn-ficha-qtd-txt { color: var(--ink-soft); white-space: nowrap; }
+
+/* Painel inicial: ícones e números-resumo */
+.dn-panel-grid { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.dn-panel-card-icon { display: flex; align-items: center; justify-content: center; }
+.dn-panel-card-icon svg { width: 24px; height: 24px; fill: none; stroke: var(--wine); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.dn-panel-card-stat { font-size: 13.5px; font-weight: 600; color: var(--wine); margin-bottom: 4px; }
+.dn-stat-warn { color: var(--warn); }
+.dn-stat-ok { color: var(--ok); }
+.dn-stat-danger { color: #B3261E; }

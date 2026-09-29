@@ -2,6 +2,7 @@
 @model DeliciasDaNilda.Pages.Admin.IndexModel
 @{
     ViewData["Title"] = "Painel ADM";
+    string Plural(int n, string singular, string plural) => n == 1 ? $"1 {singular}" : $"{n} {plural}";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -13,38 +14,68 @@
 
 <div class="dn-panel-grid">
     <a asp-page="/Admin/Pedidos/Index" class="dn-panel-card">
-        <div class="dn-panel-card-icon" style="background:var(--rose-light);"></div>
+        <div class="dn-panel-card-icon" style="background:var(--rose-light);">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1zM7 6H6a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-1M9 13l2 2 4-4"/></svg>
+        </div>
         <div class="dn-panel-card-title">Pedidos</div>
+        <div class="dn-panel-card-stat @(Model.PedidosPendentes > 0 ? "dn-stat-warn" : "")">
+            @(Model.PedidosPendentes > 0 ? $"{Model.PedidosPendentes} aguardando confirmação" : "Nada pendente")
+        </div>
         <div class="dn-panel-card-sub">Confirmação e cancelamento</div>
     </a>
-    <a asp-page="/Admin/Sabores/Cadastro" class="dn-panel-card">
-        <div class="dn-panel-card-icon" style="background:var(--gold-light);"></div>
-        <div class="dn-panel-card-title">Sabores e ficha técnica</div>
-        <div class="dn-panel-card-sub">Ingredientes por kg</div>
-    </a>
-    <a asp-page="/Admin/Insumos/Index" class="dn-panel-card">
-        <div class="dn-panel-card-icon" style="background:var(--cream-2);"></div>
-        <div class="dn-panel-card-title">Insumos</div>
-        <div class="dn-panel-card-sub">Entradas e perdas</div>
-    </a>
     <a asp-page="/Admin/Agenda/Index" class="dn-panel-card">
-        <div class="dn-panel-card-icon" style="background:var(--rose-light);"></div>
+        <div class="dn-panel-card-icon" style="background:var(--rose-light);">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM4 10h16M8 3v4M16 3v4"/></svg>
+        </div>
         <div class="dn-panel-card-title">Agenda do dia</div>
+        <div class="dn-panel-card-stat">@(Model.PedidosHoje == 0 ? "Sem entregas hoje" : Plural(Model.PedidosHoje, "entrega hoje", "entregas hoje"))</div>
         <div class="dn-panel-card-sub">Pedidos e ficha técnica total</div>
     </a>
     <a asp-page="/Admin/Estoque/Alertas" class="dn-panel-card">
-        <div class="dn-panel-card-icon" style="background:#FCEAE8;"></div>
+        <div class="dn-panel-card-icon" style="background:#FCEAE8;">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4l9 16H3L12 4zM12 10v4M12 17v.5"/></svg>
+        </div>
         <div class="dn-panel-card-title">Alerta de reposição</div>
+        @if (Model.IngredienteEmFalta is not null)
+        {
+            <div class="dn-panel-card-stat dn-stat-danger">Vai faltar: @Model.IngredienteEmFalta</div>
+        }
+        else
+        {
+            <div class="dn-panel-card-stat dn-stat-ok">Estoque em dia</div>
+        }
         <div class="dn-panel-card-sub">Projeção de estoque</div>
     </a>
     <a asp-page="/Admin/Pagamentos/Registrar" class="dn-panel-card">
-        <div class="dn-panel-card-icon" style="background:var(--gold-light);"></div>
+        <div class="dn-panel-card-icon" style="background:var(--gold-light);">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1zM3 11h18M7 15h3"/></svg>
+        </div>
         <div class="dn-panel-card-title">Pagamentos</div>
+        <div class="dn-panel-card-stat">@(Model.ValorAReceber > 0 ? $"{Model.ValorAReceber:C} a receber" : "Tudo recebido")</div>
         <div class="dn-panel-card-sub">Baixa financeira por pedido</div>
     </a>
+    <a asp-page="/Admin/Sabores/Cadastro" class="dn-panel-card">
+        <div class="dn-panel-card-icon" style="background:var(--gold-light);">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16M6 20v-6a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6M12 13V9M12 9c-1 0-1.5-1-1.5-1.8S12 5 12 5s1.5 1.4 1.5 2.2S13 9 12 9z"/></svg>
+        </div>
+        <div class="dn-panel-card-title">Sabores e ficha técnica</div>
+        <div class="dn-panel-card-stat">@Plural(Model.SaboresDisponiveis, "sabor disponível", "sabores disponíveis")</div>
+        <div class="dn-panel-card-sub">Ingredientes por kg</div>
+    </a>
+    <a asp-page="/Admin/Insumos/Index" class="dn-panel-card">
+        <div class="dn-panel-card-icon" style="background:var(--cream-2);">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8l8-4 8 4v8l-8 4-8-4V8zM4 8l8 4 8-4M12 12v8"/></svg>
+        </div>
+        <div class="dn-panel-card-title">Insumos</div>
+        <div class="dn-panel-card-stat">@Plural(Model.Ingredientes, "ingrediente", "ingredientes")</div>
+        <div class="dn-panel-card-sub">Entradas e perdas</div>
+    </a>
     <a asp-page="/Admin/WhatsAppBot/Index" class="dn-panel-card">
-        <div class="dn-panel-card-icon" style="background:var(--cream-2);"></div>
+        <div class="dn-panel-card-icon" style="background:var(--cream-2);">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-5 4v-4H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>
+        </div>
         <div class="dn-panel-card-title">Atendimento automático</div>
-        <div class="dn-panel-card-sub">Ligar/desligar pedidos pelo WhatsApp</div>
+        <div class="dn-panel-card-stat @(Model.BotAtivo ? "dn-stat-ok" : "")">@(Model.BotAtivo ? "Ligado" : "Desligado")</div>
+        <div class="dn-panel-card-sub">Pedidos pelo WhatsApp</div>
     </a>
 </div>
