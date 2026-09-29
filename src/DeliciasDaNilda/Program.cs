@@ -1,3 +1,5 @@
+using System.Globalization;
+using DeliciasDaNilda.Common;
 using DeliciasDaNilda.Data;
 using DeliciasDaNilda.Endpoints;
 using DeliciasDaNilda.Services;
@@ -6,12 +8,22 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Exibição sempre em pt-BR (R$, datas), mesmo num servidor em outro idioma.
+var ptBr = new CultureInfo("pt-BR");
+CultureInfo.DefaultThreadCurrentCulture = ptBr;
+CultureInfo.DefaultThreadCurrentUICulture = ptBr;
+
 // Add services to the container.
 builder.Services.AddRazorPages(options =>
 {
     // RN02: todo o painel ADM exige autenticação, exceto a própria tela de
     // login (marcada com [AllowAnonymous] em Login.cshtml.cs).
     options.Conventions.AuthorizeFolder("/Admin");
+})
+.AddMvcOptions(options =>
+{
+    // Decimais aceitam "0.5" (input number) e "0,5" (pt-BR) — ver DecimalModelBinder.
+    options.ModelBinderProviders.Insert(0, new DecimalModelBinderProvider());
 });
 
 builder.Services.AddDbContext<AppDbContext>(options =>
