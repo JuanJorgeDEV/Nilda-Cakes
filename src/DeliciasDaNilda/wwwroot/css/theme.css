@@ -603,7 +603,7 @@ h1, h2, h3, .dn-title {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 130px auto;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .dn-ficha-remover { white-space: nowrap; }
@@ -611,8 +611,8 @@ h1, h2, h3, .dn-title {
 @media (max-width: 520px) {
   .dn-ficha-linha {
     grid-template-columns: minmax(0, 1fr) auto;
-    margin-bottom: 18px;
-    padding-bottom: 18px;
+    margin-bottom: 30px;
+    padding-bottom: 30px;
     border-bottom: 1px dashed var(--cream-2);
   }
   .dn-ficha-linha:last-child { border-bottom: 0; }
