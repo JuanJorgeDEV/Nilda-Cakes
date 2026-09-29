@@ -862,3 +862,129 @@ h1, h2, h3, .dn-title {
   nav.dn-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-left: -16px; margin-right: -16px; padding: 0 16px; }
   nav.dn-chips .dn-chip { flex: none; }
 }
+
+/* Agenda semanal (estilo calendário) ---------------------------------------*/
+
+.dn-seta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1;
+  text-decoration: none;
+}
+.dn-seta:hover { background: var(--cream-2); color: var(--wine); }
+.dn-semana-titulo { font-size: 16px; font-weight: 500; }
+.dn-cal-rolagem { max-height: 400px; overflow-y: auto; scrollbar-gutter: stable; }
+.dn-cal-cabecalho, .dn-cal-diatodo { overflow-y: hidden; scrollbar-gutter: stable; }
+
+.dn-cal { padding: 0; overflow: hidden; }
+.dn-cal-cabecalho, .dn-cal-diatodo, .dn-cal-corpo {
+  display: grid;
+  grid-template-columns: 56px repeat(7, minmax(0, 1fr));
+}
+.dn-cal-cabecalho { border-bottom: 1px solid var(--cream-2); }
+.dn-cal-fuso { font-size: 10.5px; color: var(--ink-soft); padding: 6px; text-align: right; align-self: center; }
+
+.dn-cal-dia {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 0 8px;
+  text-decoration: none;
+  color: var(--ink);
+  border-left: 1px solid var(--cream-2);
+}
+.dn-cal-dia:hover { background: var(--cream); color: var(--ink); }
+.dn-cal-sem { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); }
+.dn-cal-num {
+  font-size: 22px;
+  font-weight: 500;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+.dn-cal-dia.hoje .dn-cal-sem { color: var(--wine); font-weight: 600; }
+.dn-cal-dia.hoje .dn-cal-num { background: var(--wine); color: #fff; }
+.dn-cal-dia.selecionado { background: var(--rose-light); }
+.dn-cal-ocup { font-size: 11px; color: var(--ink-soft); }
+.dn-cal-ocup.cheio { color: var(--danger); font-weight: 600; }
+
+.dn-cal-diatodo { border-bottom: 1px solid var(--cream-2); min-height: 34px; }
+.dn-cal-col { border-left: 1px solid var(--cream-2); padding: 3px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+
+.dn-cal-corpo { position: relative; overflow: hidden; }
+.dn-cal-horas { position: relative; }
+.dn-cal-horas span { position: absolute; right: 8px; transform: translateY(-50%); font-size: 10.5px; color: var(--ink-soft); }
+.dn-cal-horas span:first-child { transform: none; }
+.dn-cal-grade {
+  position: relative;
+  padding: 0;
+  background-image: repeating-linear-gradient(to bottom, var(--cream-2) 0 1px, transparent 1px var(--hora));
+}
+.dn-cal-grade.hoje { background-color: rgba(122, 32, 56, 0.025); }
+
+.dn-evento {
+  display: block;
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 11.5px;
+  line-height: 1.3;
+  text-decoration: none;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  border-left: 3px solid;
+}
+.dn-evento span { display: block; opacity: .85; overflow: hidden; text-overflow: ellipsis; }
+.dn-evento-hora { position: absolute; left: 3px; right: 3px; min-height: calc(var(--hora) - 4px); }
+.dn-evento.confirmado { background: var(--ok-bg); color: var(--ok); border-color: var(--ok); }
+.dn-evento.pendente { background: var(--warn-bg); color: var(--warn); border-color: var(--warn); }
+.dn-evento.concluido { background: var(--info-bg); color: var(--info); border-color: var(--info); }
+.dn-evento:hover { filter: brightness(.96); }
+
+.dn-cal-agora { position: absolute; left: 0; right: 0; height: 2px; background: var(--danger); z-index: 2; }
+.dn-cal-agora::before { content: ""; position: absolute; left: -5px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--danger); }
+
+.dn-semana-faixa { display: none; }
+
+.dn-capacidade { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--ink-soft); }
+.dn-capacidade i { width: 12px; height: 12px; border-radius: 3px; background: var(--cream-2); }
+.dn-capacidade i.usado { background: var(--wine); }
+.dn-capacidade.cheio { color: var(--danger); font-weight: 600; }
+
+.dn-ficha-dia { list-style: none; margin: 0; padding: 0; font-size: 14px; }
+.dn-ficha-dia li { display: grid; grid-template-columns: 1fr auto auto; gap: 16px; padding: 8px 0; border-top: 1px solid var(--cream-2); align-items: baseline; }
+.dn-ficha-dia li span:nth-child(n+2) { text-align: right; min-width: 90px; }
+.dn-ficha-dia-cab { font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-soft); border-top: 0 !important; }
+.dn-ficha-dia li.falta { color: var(--danger); }
+.dn-ficha-dia small { display: block; font-weight: 600; }
+
+@media (max-width: 768px) {
+  .dn-cal { display: none; }
+  .dn-semana-faixa { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .dn-faixa-dia {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 6px 0;
+    border-radius: 12px;
+    text-decoration: none;
+    color: var(--ink);
+  }
+  .dn-faixa-dia .dn-cal-num { width: 34px; height: 34px; font-size: 17px; }
+  .dn-faixa-dia.hoje .dn-cal-num { border: 2px solid var(--wine); color: var(--wine); font-weight: 600; }
+  .dn-faixa-dia.selecionado { background: var(--wine); }
+  .dn-faixa-dia.selecionado span, .dn-faixa-dia.selecionado.hoje .dn-cal-num { color: #fff; border-color: #fff; }
+  .dn-faixa-pontos { display: flex; gap: 2px; height: 6px; }
+  .dn-faixa-pontos i { width: 5px; height: 5px; border-radius: 50%; background: var(--rose); }
+  .dn-faixa-dia.selecionado .dn-faixa-pontos i { background: #fff; }
+  .dn-ficha-dia li span:nth-child(n+2) { min-width: 70px; }
+}

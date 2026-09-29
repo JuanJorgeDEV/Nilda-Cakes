@@ -1,91 +1,173 @@
 @page
-@model DeliciasDaNilda.Pages.Admin.Agenda.IndexModel
+@using DeliciasDaNilda.Domain.Enums
+@using DeliciasDaNilda.Services
+@using DeliciasDaNilda.Services.Common
+@using DeliciasDaNilda.Pages.Admin.Agenda
+@model IndexModel
 @{
-    ViewData["Title"] = "Agenda do dia";
+    ViewData["Title"] = "Agenda";
+    var cultura = new System.Globalization.CultureInfo("pt-BR");
+    var capacidade = AgendamentoService.CapacidadeMaximaDiaria;
+    var alturaHora = 48;
+    var inicio = Model.InicioSemana;
+    var fim = inicio.AddDays(6);
+    var tituloSemana = inicio.Month == fim.Month
+        ? $"{inicio.ToString("MMMM", cultura)} de {inicio.Year}"
+        : $"{inicio.ToString("MMM", cultura).TrimEnd('.')} – {fim.ToString("MMM", cultura).TrimEnd('.')} de {fim.Year}";
+    tituloSemana = char.ToUpper(tituloSemana[0]) + tituloSemana[1..];
+    var voltar = $"{Request.Path}{Request.QueryString}";
+    string Classe(StatusPedido s) => s switch
+    {
+        StatusPedido.PendenteConfirmacao => "pendente",
+        StatusPedido.Concluido => "concluido",
+        _ => "confirmado"
+    };
+    bool NaGrade(DeliciasDaNilda.Domain.Entities.Pedido p) =>
+        p.HorarioRetirada is { } h && h.Hour >= IndexModel.HoraInicio && h.Hour < IndexModel.HoraFim;
+    var dia = Model.DiaSelecionado;
+    var pedidosDoDia = Model.PedidosDaSemana[dia].ToList();
+    var ocupacaoDia = Model.Ocupacao(dia);
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h4 mb-0">Agenda do dia</h1>
+<div class="d-flex align-items-center gap-2 flex-wrap mb-3">
+    <h1 class="h4 mb-0 me-auto">Agenda</h1>
+    <a asp-route-dia="@Model.Hoje.ToString("yyyy-MM-dd")" class="btn btn-outline-secondary btn-sm">Hoje</a>
+    <a asp-route-dia="@inicio.AddDays(-7).ToString("yyyy-MM-dd")" class="dn-seta" aria-label="Semana anterior">‹</a>
+    <a asp-route-dia="@inicio.AddDays(7).ToString("yyyy-MM-dd")" class="dn-seta" aria-label="Próxima semana">›</a>
+    <span class="dn-semana-titulo">@tituloSemana</span>
 </div>
 
-<div class="dn-card p-3 mb-4">
-    <form method="get" class="d-flex align-items-center gap-3 flex-wrap mb-0">
-        <label asp-for="Data" class="form-label mb-0">Data:</label>
-        <input asp-for="Data" type="date" class="form-control" style="max-width:180px;" />
-        <button type="submit" class="btn btn-secondary btn-sm">Ver agenda</button>
-    </form>
+@* Grade semanal (desktop) *@
+<div class="dn-cal dn-card mb-4" style="--hora:@(alturaHora)px;">
+    <div class="dn-cal-cabecalho">
+        <div class="dn-cal-fuso"></div>
+        @foreach (var d in Model.DiasDaSemana)
+        {
+            var ocup = Model.Ocupacao(d);
+            <a asp-route-dia="@d.ToString("yyyy-MM-dd")" class="dn-cal-dia @(d == Model.Hoje ? "hoje" : "") @(d == dia ? "selecionado" : "")">
+                <span class="dn-cal-sem">@d.ToString("ddd", cultura).TrimEnd('.')</span>
+                <span class="dn-cal-num">@d.Day</span>
+                <span class="dn-cal-ocup @(ocup >= capacidade ? "cheio" : "")" title="Bolos no dia (limite @capacidade)">@ocup/@capacidade</span>
+            </a>
+        }
+    </div>
+    <div class="dn-cal-diatodo">
+        <div class="dn-cal-fuso">a combinar</div>
+        @foreach (var d in Model.DiasDaSemana)
+        {
+            <div class="dn-cal-col">
+                @foreach (var p in Model.PedidosDaSemana[d].Where(p => !NaGrade(p)))
+                {
+                    <a asp-route-dia="@d.ToString("yyyy-MM-dd")" asp-route-aberto="@p.Id" asp-fragment="card-pedido-@p.Id" class="dn-evento @Classe(p.StatusPedido)" title="@p.Cliente.NomeCompleto — @p.Sabor.Nome">
+                        @p.Cliente.NomeCompleto.Split(' ')[0] · @p.Sabor.Nome
+                    </a>
+                }
+            </div>
+        }
+    </div>
+    <div class="dn-cal-rolagem">
+    <div class="dn-cal-corpo" style="height:@((IndexModel.HoraFim - IndexModel.HoraInicio) * alturaHora)px;">
+        <div class="dn-cal-horas">
+            @for (var h = IndexModel.HoraInicio; h < IndexModel.HoraFim; h++)
+            {
+                <span style="top:@((h - IndexModel.HoraInicio) * alturaHora)px;">@h:00</span>
+            }
+        </div>
+        @foreach (var d in Model.DiasDaSemana)
+        {
+            <div class="dn-cal-col dn-cal-grade @(d == Model.Hoje ? "hoje" : "")">
+                @foreach (var p in Model.PedidosDaSemana[d].Where(NaGrade))
+                {
+                    var h = p.HorarioRetirada!.Value;
+                    var topo = ((h.Hour - IndexModel.HoraInicio) * 60 + h.Minute) * alturaHora / 60;
+                    <a asp-route-dia="@d.ToString("yyyy-MM-dd")" asp-route-aberto="@p.Id" asp-fragment="card-pedido-@p.Id" class="dn-evento dn-evento-hora @Classe(p.StatusPedido)" style="top:@(topo)px;">
+                        <strong>@h.ToString("HH:mm")</strong> @p.Cliente.NomeCompleto.Split(' ')[0]
+                        <span>@p.Sabor.Nome · @QuantidadeFormatter.Formatar(p.Peso, "kg")</span>
+                    </a>
+                }
+                @if (d == Model.Hoje && DateTime.Now.Hour >= IndexModel.HoraInicio && DateTime.Now.Hour < IndexModel.HoraFim)
+                {
+                    var agora = ((DateTime.Now.Hour - IndexModel.HoraInicio) * 60 + DateTime.Now.Minute) * alturaHora / 60;
+                    <div class="dn-cal-agora" style="top:@(agora)px;"></div>
+                }
+            </div>
+        }
+    </div>
+    </div>
 </div>
 
-@if (Model.Agenda is not null)
+@* Faixa da semana (celular) *@
+<div class="dn-semana-faixa mb-3">
+    @foreach (var d in Model.DiasDaSemana)
+    {
+        var qtd = Model.PedidosDaSemana[d].Count();
+        <a asp-route-dia="@d.ToString("yyyy-MM-dd")" class="dn-faixa-dia @(d == Model.Hoje ? "hoje" : "") @(d == dia ? "selecionado" : "")">
+            <span class="dn-cal-sem">@d.ToString("ddd", cultura).TrimEnd('.')</span>
+            <span class="dn-cal-num">@d.Day</span>
+            <span class="dn-faixa-pontos">@for (var i = 0; i < Math.Min(qtd, capacidade); i++) { <i></i> }</span>
+        </a>
+    }
+</div>
+
+@* Dia selecionado *@
+<div class="d-flex align-items-baseline justify-content-between flex-wrap gap-2 mb-2">
+    <h2 class="h5 mb-0 dn-secao-titulo">
+        @(dia == Model.Hoje ? "Hoje, " + dia.ToString("dddd, d 'de' MMMM", cultura) : char.ToUpper(dia.ToString("dddd", cultura)[0]) + dia.ToString("dddd, d 'de' MMMM", cultura)[1..])
+    </h2>
+    <span class="dn-capacidade @(ocupacaoDia >= capacidade ? "cheio" : "")">
+        @for (var i = 0; i < capacidade; i++) { <i class="@(i < ocupacaoDia ? "usado" : "")"></i> }
+        @ocupacaoDia de @capacidade bolos
+    </span>
+</div>
+
+@if (pedidosDoDia.Count == 0)
 {
-    <div class="dn-card p-3 mb-4">
-        <h2 class="h6" style="color:var(--wine);">Pedidos em @Model.Agenda.Data.ToString("dd/MM/yyyy")</h2>
-        <div class="table-responsive">
-            <table class="dn-table w-100">
-                <thead>
-                    <tr>
-                        <th>Cliente</th>
-                        <th>WhatsApp</th>
-                        <th>Sabor</th>
-                        <th>Peso</th>
-                        <th>Retirada</th>
-                        <th>Status</th>
-                        <th>Pagamento</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var pedido in Model.Agenda.Pedidos)
-                    {
-                        var badge = DeliciasDaNilda.Pages.Shared.StatusBadgeHelper.Pedido(pedido.StatusPedido);
-                        var badgePagamento = DeliciasDaNilda.Pages.Shared.StatusBadgeHelper.Pagamento(pedido.StatusPagamento);
-                        <tr>
-                            <td>@pedido.ClienteNomeCompleto</td>
-                            <td>@pedido.ClienteWhatsApp</td>
-                            <td>@pedido.Sabor</td>
-                            <td>@pedido.Peso.ToString("N3") kg</td>
-                            <td>@(pedido.HorarioRetirada?.ToString("HH:mm") ?? "A combinar")</td>
-                            <td><span class="dn-badge @badge.CssClass">● @badge.Label</span></td>
-                            <td><span class="dn-badge @badgePagamento.CssClass">● @badgePagamento.Label</span></td>
-                        </tr>
-                    }
-                    @if (Model.Agenda.Pedidos.Count == 0)
-                    {
-                        <tr>
-                            <td colspan="7" class="text-center" style="color:var(--ink-soft);">Nenhum pedido para esta data.</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+    <div class="dn-card p-3 mb-4" style="color:var(--ink-soft);">Nenhum pedido para este dia.</div>
+}
+else
+{
+    <div class="d-flex flex-column gap-2 mb-4">
+        @foreach (var p in pedidosDoDia)
+        {
+            <partial name="_PedidoCard" model="new DeliciasDaNilda.Pages.Shared.PedidoCardModel(p, Model.Faltas.GetValueOrDefault(p.Id), Model.Hoje, voltar, Model.Aberto == p.Id)" />
+        }
     </div>
+}
 
+@if (Model.AgendaDoDia is { FichaTecnicaTotalDoDia.Count: > 0 } agenda)
+{
     <div class="dn-card p-3">
-        <h2 class="h6 mb-1" style="color:var(--wine);">Ficha técnica total do dia</h2>
-        <p style="font-size:12px;color:var(--ink-soft);">Soma dos ingredientes necessários para produzir todos os pedidos do dia.</p>
-        <div class="table-responsive">
-            <table class="dn-table w-100" style="max-width:500px;">
-                <thead>
-                    <tr>
-                        <th>Ingrediente</th>
-                        <th>Quantidade total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var ingrediente in Model.Agenda.FichaTecnicaTotalDoDia)
-                    {
-                        <tr>
-                            <td>@ingrediente.IngredienteNome</td>
-                            <td style="font-weight:600;">@ingrediente.QuantidadeTotalNecessaria.ToString("N4") @ingrediente.UnidadeMedida</td>
-                        </tr>
-                    }
-                    @if (Model.Agenda.FichaTecnicaTotalDoDia.Count == 0)
-                    {
-                        <tr>
-                            <td colspan="2" class="text-center" style="color:var(--ink-soft);">Sem consumo projetado.</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+        <h3 class="h6 mb-1 dn-secao-titulo">Ficha técnica do dia</h3>
+        <p class="mb-2" style="font-size:12.5px;color:var(--ink-soft);">O que vai nos bolos deste dia, comparado com o que tem no estoque.</p>
+        <ul class="dn-ficha-dia">
+            <li class="dn-ficha-dia-cab"><span>Ingrediente</span><span>Precisa</span><span>Em estoque</span></li>
+            @foreach (var ing in agenda.FichaTecnicaTotalDoDia)
+            {
+                <li class="@(ing.Falta > 0 ? "falta" : "")">
+                    <span>@ing.IngredienteNome</span>
+                    <span>@QuantidadeFormatter.Formatar(ing.QuantidadeTotalNecessaria, ing.UnidadeMedida)</span>
+                    <span>
+                        @QuantidadeFormatter.Formatar(ing.SaldoAtual, ing.UnidadeMedida)
+                        @if (ing.Falta > 0)
+                        {
+                            <small>falta @QuantidadeFormatter.Formatar(ing.Falta, ing.UnidadeMedida)</small>
+                        }
+                    </span>
+                </li>
+            }
+        </ul>
     </div>
+}
+
+@section Scripts {
+    <script>
+        document.querySelector('.dn-pedido .collapse.show')?.closest('.dn-pedido')?.scrollIntoView({ block: 'start' });
+        // Grade começa no primeiro pedido com horário, ou às 8h.
+        (function () {
+            var rolagem = document.querySelector('.dn-cal-rolagem');
+            if (!rolagem) return;
+            var tops = [...rolagem.querySelectorAll('.dn-evento-hora')].map(e => e.offsetTop);
+            rolagem.scrollTop = tops.length ? Math.max(0, Math.min(...tops) - 24) : @alturaHora;
+        })();
+    </script>
 }

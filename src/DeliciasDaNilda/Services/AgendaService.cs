@@ -25,7 +25,17 @@ public sealed record IngredienteNecessarioDoDia(
     int IngredienteId,
     string IngredienteNome,
     string UnidadeMedida,
-    decimal QuantidadeTotalNecessaria);
+    decimal QuantidadeTotalNecessaria,
+    decimal SaldoAtual = 0m,
+    decimal QuantidadeAindaAAbater = 0m)
+{
+    /// <summary>
+    /// Quanto falta comprar para os pedidos do dia ainda não confirmados. Os
+    /// confirmados já saíram do saldo (RN12), por isso só a parte pendente
+    /// é comparada com o estoque atual.
+    /// </summary>
+    public decimal Falta => Math.Max(0m, QuantidadeAindaAAbater - SaldoAtual);
+}
 
 /// <summary>
 /// Visão consolidada da agenda para uma data (RN16): pedidos do dia e a
@@ -107,12 +117,14 @@ public class AgendaService : IAgendaService
             foreach (var item in fichaTecnica.Itens)
             {
                 var quantidadeNecessaria = item.QuantidadePorKg * pedido.Peso;
+                var aindaAAbater = pedido.StatusPedido == StatusPedido.PendenteConfirmacao ? quantidadeNecessaria : 0m;
 
                 if (totaisPorIngrediente.TryGetValue(item.IngredienteId, out var existente))
                 {
                     totaisPorIngrediente[item.IngredienteId] = existente with
                     {
-                        QuantidadeTotalNecessaria = existente.QuantidadeTotalNecessaria + quantidadeNecessaria
+                        QuantidadeTotalNecessaria = existente.QuantidadeTotalNecessaria + quantidadeNecessaria,
+                        QuantidadeAindaAAbater = existente.QuantidadeAindaAAbater + aindaAAbater
                     };
                 }
                 else
@@ -121,7 +133,9 @@ public class AgendaService : IAgendaService
                         IngredienteId: item.IngredienteId,
                         IngredienteNome: item.Ingrediente.Nome,
                         UnidadeMedida: item.Ingrediente.UnidadeMedida,
-                        QuantidadeTotalNecessaria: quantidadeNecessaria);
+                        QuantidadeTotalNecessaria: quantidadeNecessaria,
+                        SaldoAtual: item.Ingrediente.SaldoAtual,
+                        QuantidadeAindaAAbater: aindaAAbater);
                 }
             }
         }
