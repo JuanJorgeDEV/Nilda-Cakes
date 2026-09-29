@@ -47,22 +47,16 @@
             <div id="itens-ficha-tecnica">
                 @for (var i = 0; i < Model.Entrada.Itens.Count; i++)
                 {
-                    <div class="row g-2 mb-2 linha-item-ficha align-items-center">
-                        <div class="col-6">
-                            <select name="Entrada.Itens[@i].IngredienteId" class="form-select">
-                                <option value="0">Selecione o ingrediente</option>
-                                @foreach (var ingrediente in Model.Ingredientes)
-                                {
-                                    <option value="@ingrediente.Id">@ingrediente.Nome (@ingrediente.UnidadeMedida)</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-4">
-                            <input name="Entrada.Itens[@i].QuantidadePorKg" type="number" step="0.0001" min="0" class="form-control" placeholder="Quantidade por kg" />
-                        </div>
-                        <div class="col-2">
-                            <button type="button" class="btn btn-outline-danger w-100 btn-remover-linha">Remover</button>
-                        </div>
+                    <div class="dn-ficha-linha linha-item-ficha">
+                        <select name="Entrada.Itens[@i].IngredienteId" class="form-select dn-ficha-ingrediente" aria-label="Ingrediente">
+                            <option value="0">Selecione o ingrediente</option>
+                            @foreach (var ingrediente in Model.Ingredientes)
+                            {
+                                <option value="@ingrediente.Id">@ingrediente.Nome (@ingrediente.UnidadeMedida)</option>
+                            }
+                        </select>
+                        <input name="Entrada.Itens[@i].QuantidadePorKg" type="number" step="0.0001" min="0" class="form-control dn-ficha-qtd" placeholder="Qtd. por kg" aria-label="Quantidade por kg" />
+                        <button type="button" class="btn btn-outline-danger dn-ficha-remover btn-remover-linha" aria-label="Remover ingrediente">Remover</button>
                     </div>
                 }
             </div>
@@ -95,16 +89,22 @@
                         }
                     </div>
                 </div>
-                <div style="font-size:12.5px;color:var(--ink-soft);">
-                    @if (sabor.FichaTecnica is not null && sabor.FichaTecnica.Itens.Count > 0)
-                    {
-                        @string.Join(" · ", sabor.FichaTecnica.Itens.Select(item => $"{item.Ingrediente.Nome} {item.QuantidadePorKg.ToString("N4")} {item.Ingrediente.UnidadeMedida}/kg"))
-                    }
-                    else
-                    {
-                        <span>Sem ficha técnica</span>
-                    }
-                </div>
+                @if (sabor.FichaTecnica is not null && sabor.FichaTecnica.Itens.Count > 0)
+                {
+                    <ul class="dn-ficha-lista">
+                        @foreach (var item in sabor.FichaTecnica.Itens.OrderBy(x => x.Ingrediente.Nome))
+                        {
+                            <li>
+                                <span>@item.Ingrediente.Nome</span>
+                                <span class="dn-ficha-qtd-txt">@item.QuantidadePorKg.ToString("N4") @item.Ingrediente.UnidadeMedida/kg</span>
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <div style="font-size:12.5px;color:var(--ink-soft);">Sem ficha técnica</div>
+                }
             </div>
         }
         @if (Model.SaboresCadastrados.Count == 0)
