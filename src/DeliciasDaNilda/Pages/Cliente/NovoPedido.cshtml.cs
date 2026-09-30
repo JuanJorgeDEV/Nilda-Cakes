@@ -26,8 +26,13 @@ public class NovoPedidoModel : PageModel
         IPedidoService pedidoService,
         IAgendamentoService agendamentoService,
         ISaborService saborService,
-        IConfiguracaoService configuracao)
+        IConfiguracaoService configuracao,
+        IConfiguration configuration)
     {
+        var insta = configuration["Loja:Instagram"]?.Trim().TrimStart('@');
+        InstagramUrl = string.IsNullOrEmpty(insta)
+            ? null
+            : insta.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? insta : $"https://instagram.com/{insta}";
         _configuracao = configuracao;
         _pedidoService = pedidoService;
         _agendamentoService = agendamentoService;
@@ -50,6 +55,9 @@ public class NovoPedidoModel : PageModel
 
     /// <summary>Link wa.me para a cliente que prefere fazer o pedido conversando.</summary>
     public string? LinkConversar { get; set; }
+
+    /// <summary>Link do Instagram da loja (configurado em Loja:Instagram; null se não definido).</summary>
+    public string? InstagramUrl { get; set; }
 
     public class EntradaModel
     {

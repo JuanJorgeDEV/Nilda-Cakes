@@ -37,6 +37,7 @@ const STEPS = {
 // Usado so se a API de mensagens estiver fora do ar.
 const TEXTO_INDISPONIVEL = 'Desculpe, o sistema esta temporariamente indisponivel. Tente novamente em instantes.';
 const CACHE_MENSAGENS_MS = 60_000;
+const SABORES_POR_PAGINA = 8;
 
 const RESPOSTAS_NAO = ['nao', 'não', 'n', 'nada', 'nenhum', 'nenhuma', 'sem'];
 const RESPOSTAS_SIM = ['sim', 's', 'ok', 'isso', 'confirmo', 'pode'];
@@ -81,7 +82,7 @@ function numeroDoJid(jid) {
  * Cria a conversa ligada a uma API (injetada para facilitar testes).
  * @param {object} api modulo ./apiClient (ou um dublê nos testes)
  */
-function criarConversa(api) {
+function criarConversa(api, { siteUrl } = {}) {
   /** @type {Map<string, any>} numero -> estado da conversa */
   const sessoes = new Map();
   let mensagens = null;
@@ -142,9 +143,24 @@ function criarConversa(api) {
    * @param {string} numero telefone do remetente (so digitos, com DDI)
    * @param {string} textoBruto texto da mensagem (legenda, se for foto)
    * @param {{tipo?: 'texto'|'imagem'}} [opcoes]
-   * @returns {Promise<string[]>}
+   * @returns {Promise<Array<string|{imagem: string, legenda: string}>>}
    */
   async function handleMessage(numero, textoBruto, opcoes = {}) {
+    const respostas = await processar(numero, textoBruto, opcoes);
+    return comLinkDoSite(respostas);
+  }
+
+  /** Rodape com o link do site na ultima mensagem de texto (quem preferir pedir por la). */
+  function comLinkDoSite(respostas) {
+    if (!siteUrl || !respostas.length) return respostas;
+    const ultimo = respostas.length - 1;
+    if (typeof respostas[ultimo] !== 'string') return respostas;
+    const copia = [...respostas];
+    copia[ultimo] = `${copia[ultimo]}\n\n🌐 Prefere pedir pelo site? ${siteUrl}`;
+    return copia;
+  }
+
+  async function processar(numero, textoBruto, opcoes = {}) {
     const texto = (textoBruto || '').trim();
     const tipo = opcoes.tipo || 'texto';
 
@@ -276,22 +292,14 @@ function criarConversa(api) {
   // ---- Menu ---------------------------------------------------------------
 
   async function handleMenu(sessao, texto) {
-    const opcao = parseOpcao(texto, 1, 4);
+    const opcao = parseOpcao(texto, 1, 3);
     if (opcao === null) return [menu(sessao)];
 
-    if (opcao === 1) return await listarSabores(sessao);
-    if (opcao === 2) return await prepararEscolhaSabor(sessao);
-    if (opcao === 3) return listarMeusPedidos(sessao);
+    if (opcao === 1) return await prepararEscolhaSabor(sessao);
+    if (opcao === 2) return listarMeusPedidos(sessao);
 
     sessao.step = STEPS.SILENCIO;
     return [msg('falar_com_nilda')];
-  }
-
-  async function listarSabores(sessao) {
-    const sabores = await api.getSabores();
-    if (!sabores.length) return [msg('sem_sabores')];
-    const linhas = sabores.map((s) => `• ${s.nome} — ${formatarMoeda(s.precoPorKg)}/kg`);
-    return [msg('sabores_titulo') + '\n' + linhas.join('\n'), menu(sessao)];
   }
 
   function listarMeusPedidos(sessao) {
@@ -303,29 +311,65 @@ function criarConversa(api) {
 
   // ---- Pedido pelo WhatsApp -----------------------------------------------
 
-  function textoSabores(sabores) {
-    return sabores.map((s, i) => `${i + 1}. ${s.nome} (${formatarMoeda(s.precoPorKg)}/kg)`).join('\n');
+  function textoPaginaSabores(sessao) {
+    const sabores = sessao.cache.sabores;
+    const totalPaginas = Math.ceil(sabores.length / SABORES_POR_PAGINA);
+    const pagina = Math.min(Math.max(sessao.cache.pagina || 0, 0), totalPaginas - 1);
+    sessao.cache.pagina = pagina;
+    const ini = pagina * SABORES_POR_PAGINA;
+    const linhas = sabores
+      .slice(ini, ini + SABORES_POR_PAGINA)
+      .map((s, i) => `${ini + i + 1}. ${s.nome} (${formatarMoeda(s.precoPorKg)}/kg)`);
+    const dicas = ['Responda com o número do sabor'];
+    if (sabores.some((s) => s.imagemUrl)) dicas.push('*foto 3* para ver a foto do sabor 3');
+    if (pagina < totalPaginas - 1) dicas.push('*mais* para ver os próximos');
+    if (pagina > 0) dicas.push('*voltar* para os anteriores');
+    const rodape = totalPaginas > 1 ? `Página ${pagina + 1} de ${totalPaginas}\n` : '';
+    return linhas.join('\n') + '\n\n' + rodape + dicas.join(' · ') + '.';
   }
 
   async function prepararEscolhaSabor(sessao) {
     const sabores = await api.getSabores();
     if (!sabores.length) return [msg('sem_sabores')];
     sessao.cache.sabores = sabores;
+    sessao.cache.pagina = 0;
     sessao.dados = {};
     sessao.step = STEPS.PEDIDO_SABOR;
-    return [msg('pergunta_sabor') + '\n' + textoSabores(sabores)];
+    return [msg('pergunta_sabor') + '\n' + textoPaginaSabores(sessao)];
   }
 
   function handlePedidoSabor(sessao, texto) {
     const sabores = sessao.cache.sabores || [];
+    const t = normalizarResposta(texto);
+
+    if (['mais', 'proximos', 'próximos', 'proxima', 'próxima'].includes(t)) {
+      sessao.cache.pagina = (sessao.cache.pagina || 0) + 1;
+      return [textoPaginaSabores(sessao)];
+    }
+    if (['voltar', 'anterior', 'anteriores'].includes(t)) {
+      sessao.cache.pagina = (sessao.cache.pagina || 0) - 1;
+      return [textoPaginaSabores(sessao)];
+    }
+
+    const pedidoFoto = t.match(/^fotos?\s*(\d+)$/);
+    if (pedidoFoto) {
+      const alvo = sabores[Number(pedidoFoto[1]) - 1];
+      if (!alvo) return [msg('opcao_invalida') + '\n' + textoPaginaSabores(sessao)];
+      if (!alvo.imagemUrl) return [`Ainda não tenho foto do sabor *${alvo.nome}*. A Nilda pode te mandar uma, é só pedir depois.`];
+      return [{ imagem: alvo.imagemUrl, legenda: `${alvo.nome} — ${formatarMoeda(alvo.precoPorKg)}/kg` }];
+    }
+
     const opcao = parseOpcao(texto, 1, sabores.length);
-    if (opcao === null) return [msg('opcao_invalida') + '\n' + textoSabores(sabores)];
+    if (opcao === null) return [msg('opcao_invalida') + '\n' + textoPaginaSabores(sessao)];
 
     const sabor = sabores[opcao - 1];
     sessao.dados.saborId = sabor.id;
     sessao.dados.saborNome = sabor.nome;
     sessao.step = STEPS.PEDIDO_PESO;
-    return [msg('pergunta_peso')];
+    const resposta = [];
+    if (sabor.imagemUrl) resposta.push({ imagem: sabor.imagemUrl, legenda: sabor.nome });
+    resposta.push(msg('pergunta_peso'));
+    return resposta;
   }
 
   async function handlePedidoPeso(sessao, texto) {

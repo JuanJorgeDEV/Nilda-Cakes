@@ -1306,3 +1306,6 @@ label.dn-dia:hover { background: var(--rose); color: #fff; }
 .dn-ranking { counter-reset: posicao; }
 .dn-ranking > li { counter-increment: posicao; }
 .dn-ranking .dn-barras-topo span:first-child::before { content: counter(posicao) "º "; color: var(--ink-soft); font-weight: 400; }
+
+.dn-mes-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+.dn-mes-nav button:disabled { opacity: .3; }

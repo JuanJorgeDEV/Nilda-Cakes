@@ -53,7 +53,7 @@ public static class WhatsAppBotEndpoints
         {
             var sabores = await saborService.ListarAsync(apenasDisponiveis: true, ct);
             var resposta = sabores
-                .Select(s => new SaborResponse(s.Id, s.Nome, s.PrecoPorKg))
+                .Select(s => new SaborResponse(s.Id, s.Nome, s.PrecoPorKg, s.ImagemUrl))
                 .ToList();
             return Results.Ok(resposta);
         });
@@ -280,7 +280,7 @@ public static class WhatsAppBotEndpoints
 
     public record StatusBotResponse(bool Ativo);
 
-    public record SaborResponse(int Id, string Nome, decimal PrecoPorKg);
+    public record SaborResponse(int Id, string Nome, decimal PrecoPorKg, string? ImagemUrl);
 
     public record DataDisponivelResponse(string Data, string Texto, bool Disponivel);
 

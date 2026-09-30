@@ -10,6 +10,7 @@
     var datasDisponiveis = Model.OpcoesDeData.ToDictionary(o => o.Data, o => o.Bloqueada);
     var meses = Model.OpcoesDeData.Select(o => new DateOnly(o.Data.Year, o.Data.Month, 1)).Distinct().ToList();
     var tamanhos = new[] { 1m, 1.5m, 2m, 3m };
+    var mesInicial = Math.Max(0, meses.FindIndex(m => Model.Entrada.DataEntrega is { } sel && sel.Year == m.Year && sel.Month == m.Month));
     var etapaInicial = Model.Erro is null ? 1 : 5;
 }
 
@@ -99,12 +100,17 @@
     <section class="dn-etapa" data-etapa="3" hidden>
         <h1 class="dn-etapa-titulo">Pra quando?</h1>
         <p class="dn-etapa-sub">Encomendas com pelo menos 3 dias úteis de antecedência. Dias riscados já estão com a agenda cheia.</p>
+        <div class="dn-mes-nav">
+            <button type="button" class="dn-seta" id="mes-ant" aria-label="Mês anterior">‹</button>
+            <strong id="mes-titulo"></strong>
+            <button type="button" class="dn-seta" id="mes-prox" aria-label="Próximo mês">›</button>
+        </div>
         @foreach (var mes in meses)
         {
             var offset = (int)mes.DayOfWeek;
             var diasNoMes = DateTime.DaysInMonth(mes.Year, mes.Month);
-            <div class="dn-mes">
-                <div class="dn-mes-titulo">@(char.ToUpper(mes.ToString("MMMM", cultura)[0]) + mes.ToString("MMMM 'de' yyyy", cultura)[1..])</div>
+            <div class="dn-mes" data-mes="@meses.IndexOf(mes)" hidden>
+                <div class="dn-mes-titulo" hidden>@(char.ToUpper(mes.ToString("MMMM", cultura)[0]) + mes.ToString("MMMM 'de' yyyy", cultura)[1..])</div>
                 <div class="dn-mes-grade">
                     @foreach (var d in new[] { "D", "S", "T", "Q", "Q", "S", "S" })
                     {
@@ -194,6 +200,10 @@
         {
             <a href="@Model.LinkConversar" target="_blank" rel="noopener" class="btn btn-outline-whatsapp">Prefiro pedir pelo WhatsApp</a>
         }
+        @if (Model.InstagramUrl is not null)
+        {
+            <a href="@Model.InstagramUrl" target="_blank" rel="noopener" class="btn btn-outline-secondary">📷 Ver os bolos no Instagram</a>
+        }
     </div>
     <p class="dn-etapa-erro" id="etapa-erro" role="alert" hidden></p>
 </form>
@@ -202,6 +212,19 @@
     <script>
         (function () {
             var form = document.getElementById('form-pedido');
+            var meses = form.querySelectorAll('.dn-mes');
+            var mesAtual = @mesInicial;
+            function mostrarMes(i) {
+                mesAtual = Math.max(0, Math.min(meses.length - 1, i));
+                meses.forEach(function (m, idx) { m.hidden = idx !== mesAtual; });
+                var t = meses[mesAtual] && meses[mesAtual].querySelector('.dn-mes-titulo');
+                document.getElementById('mes-titulo').textContent = t ? t.textContent : '';
+                document.getElementById('mes-ant').disabled = mesAtual === 0;
+                document.getElementById('mes-prox').disabled = mesAtual >= meses.length - 1;
+            }
+            document.getElementById('mes-ant').addEventListener('click', function () { mostrarMes(mesAtual - 1); });
+            document.getElementById('mes-prox').addEventListener('click', function () { mostrarMes(mesAtual + 1); });
+            mostrarMes(mesAtual);
             var etapas = form.querySelectorAll('.dn-etapa');
             var total = etapas.length;
             var atual = @etapaInicial;

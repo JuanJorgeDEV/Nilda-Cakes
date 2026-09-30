@@ -28,7 +28,11 @@ const qrcode = require('qrcode-terminal');
 const api = require('./src/apiClient');
 const { criarConversa, numeroDoJid } = require('./src/conversation');
 
-const { handleMessage } = criarConversa(api);
+const SITE_URL = process.env.SITE_URL || '';
+const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:5138';
+const { handleMessage } = criarConversa(api, { siteUrl: SITE_URL });
+
+const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const AUTH_DIR = path.join(__dirname, 'auth_info');
 
@@ -118,8 +122,30 @@ async function processarMensagem(sock, msg) {
 
   const respostas = await handleMessage(numero, conteudo.texto, { tipo: conteudo.tipo });
 
+  // Ritmo humano: "digitando..." proporcional ao texto e pausa entre mensagens.
+  // Reduz o risco de o WhatsApp tratar o numero como robo.
+  await espera(800 + Math.random() * 700);
   for (const resposta of respostas) {
-    if (resposta) await sock.sendMessage(jid, { text: resposta });
+    if (!resposta) continue;
+    const ehFoto = typeof resposta !== 'string';
+    const tamanho = ehFoto ? 40 : resposta.length;
+    await sock.presenceSubscribe(jid);
+    await sock.sendPresenceUpdate('composing', jid);
+    await espera(Math.min(400 + tamanho * 12, 3500));
+    await sock.sendPresenceUpdate('paused', jid);
+
+    if (ehFoto) {
+      const url = resposta.imagem.startsWith('/') ? API_BASE_URL + resposta.imagem : resposta.imagem;
+      try {
+        await sock.sendMessage(jid, { image: { url }, caption: resposta.legenda });
+      } catch (err) {
+        console.error('[bot] Falha ao enviar foto:', err.message);
+        await sock.sendMessage(jid, { text: resposta.legenda });
+      }
+    } else {
+      await sock.sendMessage(jid, { text: resposta });
+    }
+    await espera(500 + Math.random() * 500);
   }
 }
 

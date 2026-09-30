@@ -129,7 +129,7 @@ test('pedido pelo whatsapp: sabor, peso com virgula, data disponivel e confirmac
   const { handleMessage } = criarConversa(api);
 
   await handleMessage(NUMERO, 'oi');
-  assert.match((await handleMessage(NUMERO, '2'))[0], /^QUAL_SABOR\n1\. Ninho/);
+  assert.match((await handleMessage(NUMERO, '1'))[0], /^QUAL_SABOR\n1\. Ninho/);
   assert.match((await handleMessage(NUMERO, '9'))[0], /^OPCAO_INVALIDA/);
   assert.deepEqual(await handleMessage(NUMERO, '1'), ['QUAL_PESO']);
   const datas = await handleMessage(NUMERO, '1,5 kg');
@@ -148,14 +148,14 @@ test('pedido pelo whatsapp: sabor, peso com virgula, data disponivel e confirmac
 test('meus pedidos lista os pedidos do cliente', async () => {
   const { handleMessage } = criarConversa(apiFalsa());
   await handleMessage(NUMERO, 'oi');
-  const [lista] = await handleMessage(NUMERO, '3');
+  const [lista] = await handleMessage(NUMERO, '2');
   assert.match(lista, /^MEUS\n\n\*#P7\* Ninho · 2 kg · sábado, 03\/10\n {3}confirmado$/);
 });
 
 test('falar com a Nilda silencia o bot ate "menu"', async () => {
   const { handleMessage } = criarConversa(apiFalsa());
   await handleMessage(NUMERO, 'oi');
-  assert.deepEqual(await handleMessage(NUMERO, '4'), ['FALAR']);
+  assert.deepEqual(await handleMessage(NUMERO, '3'), ['FALAR']);
   assert.deepEqual(await handleMessage(NUMERO, 'oi, tudo bem?'), []);
   assert.deepEqual(await handleMessage(NUMERO, 'Menu'), ['MENU Ana']);
 });
@@ -172,4 +172,31 @@ test('utilitarios', () => {
   assert.equal(parsePeso('1,5'), 1.5);
   assert.equal(parsePeso('2kg'), 2);
   assert.equal(parsePeso('abc'), null);
+});
+
+test('sabores sao paginados, com "mais", "voltar" e foto; link do site no fim', async () => {
+  const api = apiFalsa();
+  api.getSabores = async () => Array.from({ length: 20 }, (_, i) => ({
+    id: i + 1, nome: `Sabor ${i + 1}`, precoPorKg: 70, imagemUrl: i === 2 ? '/uploads/x.jpg' : null,
+  }));
+  const { handleMessage } = criarConversa(api, { siteUrl: 'https://nilda.test' });
+
+  await handleMessage(NUMERO, 'oi');
+  const [p1] = await handleMessage(NUMERO, '1');
+  assert.match(p1, /8\. Sabor 8/);
+  assert.doesNotMatch(p1, /9\. Sabor 9/);
+  assert.match(p1, /Página 1 de 3/);
+  assert.match(p1, /https:\/\/nilda\.test$/);
+
+  const [p2] = await handleMessage(NUMERO, 'mais');
+  assert.match(p2, /9\. Sabor 9[\s\S]*16\. Sabor 16/);
+  assert.match(p2, /Página 2 de 3/);
+  assert.match((await handleMessage(NUMERO, 'voltar'))[0], /Página 1 de 3/);
+
+  const foto = (await handleMessage(NUMERO, 'foto 3'))[0];
+  assert.equal(foto.imagem, '/uploads/x.jpg');
+  assert.match(foto.legenda, /^Sabor 3 — R\$\s70,00\/kg$/);
+  const escolha = await handleMessage(NUMERO, '3');
+  assert.equal(escolha[0].imagem, '/uploads/x.jpg');
+  assert.match(escolha[1], /^QUAL_PESO/);
 });
