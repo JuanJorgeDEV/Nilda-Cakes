@@ -13,10 +13,36 @@ namespace DeliciasDaNilda.Pages.Admin.WhatsAppBot;
 public class IndexModel : AdminPageModelBase
 {
     private readonly IConfiguracaoService _configuracaoService;
+    private readonly IWhatsAppBotProcess _processoBot;
 
-    public IndexModel(IConfiguracaoService configuracaoService)
+    public IndexModel(IConfiguracaoService configuracaoService, IWhatsAppBotProcess processoBot)
     {
         _configuracaoService = configuracaoService;
+        _processoBot = processoBot;
+    }
+
+    public bool PastaDoBotExiste => _processoBot.PastaDoBotExiste;
+
+    /// <summary>Estado da conexão e QR code, consultado a cada poucos segundos pela página.</summary>
+    public IActionResult OnGetEstado() => new JsonResult(_processoBot.Obter());
+
+    public IActionResult OnPostIniciar()
+    {
+        _processoBot.Iniciar();
+        return RedirectToPage();
+    }
+
+    public IActionResult OnPostParar()
+    {
+        _processoBot.Parar();
+        return RedirectToPage();
+    }
+
+    public IActionResult OnPostTrocarNumero()
+    {
+        _processoBot.TrocarNumero();
+        MensagemSucesso = "Sessão apagada. Escaneie o novo QR code para conectar outro número.";
+        return RedirectToPage();
     }
 
     public bool BotAtivo { get; set; }

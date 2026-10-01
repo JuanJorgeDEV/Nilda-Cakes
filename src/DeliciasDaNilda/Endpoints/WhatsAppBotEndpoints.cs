@@ -39,6 +39,15 @@ public static class WhatsAppBotEndpoints
             return Results.Ok(new StatusBotResponse(ativo));
         });
 
+        // POST /internal/whatsapp-bot/estado
+        // Corpo: { "estado": "aguardando_qr"|"conectado"|"desconectado", "qr": string?, "numero": string? }
+        // O bot informa o QR code e a conexão; o painel (aba WhatsApp) mostra.
+        grupo.MapPost("/estado", (EstadoBotRequest corpo, IWhatsAppBotProcess processo) =>
+        {
+            processo.Atualizar(corpo.Estado ?? "desconectado", corpo.Qr, corpo.Numero);
+            return Results.NoContent();
+        });
+
         // GET /internal/whatsapp-bot/mensagens
         // Resposta: { "chave": "texto", ... } — textos efetivos (padrão ou
         // personalizados pela Nilda na tela de mensagens do painel).
@@ -279,6 +288,8 @@ public static class WhatsAppBotEndpoints
     private static string PrimeiroNome(string nome) => nome.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? nome;
 
     public record StatusBotResponse(bool Ativo);
+
+    public record EstadoBotRequest(string? Estado, string? Qr, string? Numero);
 
     public record SaborResponse(int Id, string Nome, decimal PrecoPorKg, string? ImagemUrl);
 

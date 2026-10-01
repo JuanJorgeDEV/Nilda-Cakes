@@ -51,6 +51,7 @@ async function iniciarBot() {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
+      api.reportarEstado('aguardando_qr', qr);
       console.log('\n[bot] Escaneie o QR code abaixo no WhatsApp (Aparelhos conectados):\n');
       qrcode.generate(qr, { small: true });
     }
@@ -58,6 +59,7 @@ async function iniciarBot() {
     if (connection === 'close') {
       const statusCode = lastDisconnect?.error?.output?.statusCode;
       const deveReconectar = statusCode !== DisconnectReason.loggedOut;
+      api.reportarEstado(deveReconectar ? 'desconectado' : 'parado');
       console.log(
         `[bot] Conexao encerrada (codigo ${statusCode ?? 'desconhecido'}). ` +
           `Reconectando: ${deveReconectar}`
@@ -72,6 +74,7 @@ async function iniciarBot() {
       }
     } else if (connection === 'open') {
       console.log('[bot] Conectado ao WhatsApp com sucesso.');
+      api.reportarEstado('conectado', null, numeroDoJid(sock.user?.id));
     }
   });
 

@@ -17,6 +17,34 @@
 }
 
 <div class="d-flex flex-column gap-3" style="max-width:600px;">
+    <section class="dn-card p-3" id="conexao">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h2 class="h6 dn-secao-titulo mb-0">Conexão com o WhatsApp</h2>
+            <span class="dn-badge dn-badge-cancelado" id="conexao-badge">...</span>
+        </div>
+        @if (!Model.PastaDoBotExiste)
+        {
+            <p class="small dn-stat-warn mb-0">A pasta <code>whatsapp-bot</code> não foi encontrada ao lado do site.</p>
+        }
+        else
+        {
+            <p class="small mb-2" id="conexao-texto" style="color:var(--ink-soft);"></p>
+            <div id="qr-area" class="text-center my-3" hidden>
+                <div id="qr" class="d-inline-block p-2 bg-white rounded"></div>
+                <p class="small mt-2 mb-0" style="color:var(--ink-soft);">
+                    No celular da loja: WhatsApp → Aparelhos conectados → Conectar um aparelho.
+                </p>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <form method="post" asp-page-handler="Iniciar"><button class="btn btn-primary btn-sm" id="btn-iniciar" hidden>Conectar</button></form>
+                <form method="post" asp-page-handler="Parar"><button class="btn btn-outline-secondary btn-sm" id="btn-parar" hidden>Desconectar</button></form>
+                <form method="post" asp-page-handler="TrocarNumero" data-confirmar="Apagar a sessão e conectar outro número? Será preciso escanear um novo QR code.">
+                    <button class="btn btn-outline-danger btn-sm">Trocar número</button>
+                </form>
+            </div>
+        }
+    </section>
+
     <section class="dn-card p-3">
         <h2 class="h6 dn-secao-titulo">Número da loja</h2>
         <p class="small mb-2" style="color:var(--ink-soft);">
@@ -59,3 +87,47 @@
         <a asp-page="/Admin/WhatsAppBot/Mensagens" class="btn btn-outline-primary btn-sm">Editar mensagens</a>
     </section>
 </div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+        (function () {
+            var badge = document.getElementById('conexao-badge');
+            var texto = document.getElementById('conexao-texto');
+            if (!badge || !texto) return;
+            var area = document.getElementById('qr-area');
+            var qrBox = document.getElementById('qr');
+            var qrAtual = null;
+            var estados = {
+                parado: ['Desconectado', 'dn-badge-cancelado', 'O bot está parado. Clique em Conectar.'],
+                iniciando: ['Iniciando…', 'dn-badge-pendente', 'Subindo o bot, aguarde alguns segundos.'],
+                aguardando_qr: ['Aguardando QR code', 'dn-badge-pendente', 'Escaneie o QR code abaixo com o celular da loja.'],
+                conectado: ['Conectado', 'dn-badge-confirmado', 'Tudo certo: o WhatsApp da loja está conectado.'],
+                desconectado: ['Reconectando…', 'dn-badge-pendente', 'A conexão caiu, tentando de novo.'],
+                erro: ['Erro', 'dn-badge-cancelado', '']
+            };
+            function atualizar() {
+                fetch('?handler=Estado', { headers: { 'Accept': 'application/json' } })
+                    .then(function (r) { return r.json(); })
+                    .then(function (e) {
+                        var info = estados[e.estado] || estados.parado;
+                        badge.textContent = info[0];
+                        badge.className = 'dn-badge ' + info[1];
+                        texto.textContent = e.detalhe || (info[2] + (e.estado === 'conectado' && e.numero ? ' Número: ' + e.numero + '.' : ''));
+                        var parado = e.estado === 'parado' || e.estado === 'erro';
+                        document.getElementById('btn-iniciar').hidden = !parado;
+                        document.getElementById('btn-parar').hidden = parado;
+                        area.hidden = e.estado !== 'aguardando_qr' || !e.qr;
+                        if (e.qr && e.qr !== qrAtual && window.QRCode) {
+                            qrAtual = e.qr;
+                            qrBox.innerHTML = '';
+                            new QRCode(qrBox, { text: e.qr, width: 240, height: 240 });
+                        }
+                    })
+                    .catch(function () { });
+            }
+            atualizar();
+            setInterval(atualizar, 2500);
+        })();
+    </script>
+}

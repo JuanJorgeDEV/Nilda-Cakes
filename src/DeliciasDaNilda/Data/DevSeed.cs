@@ -112,33 +112,15 @@ public static class DevSeed
         ("Manteiga", 0.04m),
     };
 
-    // Sabores REAIS do cardápio (docs/cardapio-precos.md) com preço/kg exato;
-    // recheio/cobertura por kg FICTÍCIO (somado à BaseMassa).
+    // Sabores iniciais do cardápio (preço/kg exato); recheio/cobertura por kg
+    // FICTÍCIO (somado à BaseMassa). Os demais sabores de docs/cardapio-precos.md
+    // entram depois, pela tela de Cardápio.
     private static readonly (string Nome, decimal Preco, (string Ing, decimal Qtd)[] Itens)[] SaboresSeed =
     {
-        // R$ 70,00/kg
-        ("Mousse de doce de leite trufado", 70m, new[] { ("Doce de leite", 0.30m), ("Creme de leite", 0.20m), ("Chocolate meio amargo", 0.10m) }),
-        ("Mousse de chocolate", 70m, new[] { ("Chocolate meio amargo", 0.25m), ("Creme de leite", 0.25m), ("Leite condensado", 0.10m) }),
-        ("Mousse de maracujá trufado", 70m, new[] { ("Polpa de maracujá", 0.15m), ("Creme de leite", 0.20m), ("Leite condensado", 0.20m), ("Chocolate meio amargo", 0.08m) }),
-        ("Sensação", 70m, new[] { ("Morango", 0.25m), ("Chocolate ao leite", 0.15m), ("Creme de leite", 0.20m), ("Leite condensado", 0.15m) }),
-        ("Prestígio tradicional", 70m, new[] { ("Coco ralado", 0.10m), ("Leite condensado", 0.25m), ("Chocolate ao leite", 0.12m), ("Creme de leite", 0.10m) }),
-        ("Ninho com abacaxi", 70m, new[] { ("Leite em pó", 0.15m), ("Abacaxi", 0.20m), ("Leite condensado", 0.20m), ("Creme de leite", 0.15m) }),
-        ("Ninho com paçoquinha", 70m, new[] { ("Leite em pó", 0.15m), ("Paçoca", 0.12m), ("Leite condensado", 0.20m), ("Creme de leite", 0.15m) }),
-        ("Oreo", 70m, new[] { ("Biscoito Oreo", 0.20m), ("Creme de leite", 0.25m), ("Leite condensado", 0.15m) }),
-        // R$ 75,00/kg
-        ("Sensação com Brigadeiro", 75m, new[] { ("Morango", 0.25m), ("Chocolate ao leite", 0.15m), ("Creme de leite", 0.20m), ("Leite condensado", 0.35m), ("Cacau em pó", 0.03m) }),
-        ("Prestígio Trufado", 75m, new[] { ("Coco ralado", 0.10m), ("Leite condensado", 0.20m), ("Chocolate meio amargo", 0.15m), ("Creme de leite", 0.10m) }),
-        ("Ninho com morango", 75m, new[] { ("Leite em pó", 0.15m), ("Morango", 0.25m), ("Leite condensado", 0.20m), ("Creme de leite", 0.15m) }),
-        ("Ninho c/ Nozes", 75m, new[] { ("Leite em pó", 0.15m), ("Nozes", 0.08m), ("Leite condensado", 0.20m), ("Creme de leite", 0.15m) }),
-        ("Doce de leite com ameixas", 75m, new[] { ("Doce de leite", 0.30m), ("Ameixa seca", 0.10m), ("Creme de leite", 0.15m) }),
-        ("Dois amores", 75m, new[] { ("Chocolate ao leite", 0.12m), ("Chocolate branco", 0.12m), ("Creme de leite", 0.20m), ("Leite condensado", 0.15m) }),
-        ("Ninho trufado", 75m, new[] { ("Leite em pó", 0.15m), ("Leite condensado", 0.20m), ("Chocolate meio amargo", 0.10m), ("Creme de leite", 0.15m) }),
-        // Preço individual
-        ("Doces de leite com Nozes", 80m, new[] { ("Doce de leite", 0.30m), ("Nozes", 0.08m), ("Creme de leite", 0.15m) }),
-        ("Ganache", 85m, new[] { ("Chocolate meio amargo", 0.35m), ("Creme de leite", 0.30m) }),
-        ("Alpino", 85m, new[] { ("Chocolate Alpino", 0.25m), ("Creme de leite", 0.25m), ("Leite condensado", 0.15m) }),
-        ("Red Velvet com 4 leites, sem frutas", 75m, new[] { ("Cacau em pó", 0.02m), ("Cream cheese", 0.20m), ("Leite condensado", 0.15m), ("Creme de leite", 0.15m), ("Leite integral", 0.10m) }),
-        ("Red Velvet com 4 leites, com frutas em cima", 90m, new[] { ("Cacau em pó", 0.02m), ("Cream cheese", 0.20m), ("Leite condensado", 0.15m), ("Creme de leite", 0.15m), ("Leite integral", 0.10m), ("Morango", 0.15m) }),
+        ("Prestígio trufado", 75m, new[] { ("Coco ralado", 0.10m), ("Leite condensado", 0.20m), ("Chocolate meio amargo", 0.15m), ("Creme de leite", 0.10m) }),
+        ("Leite ninho trufado", 75m, new[] { ("Leite em pó", 0.15m), ("Leite condensado", 0.20m), ("Chocolate meio amargo", 0.10m), ("Creme de leite", 0.15m) }),
+        ("Leite ninho com morango", 75m, new[] { ("Leite em pó", 0.15m), ("Morango", 0.25m), ("Leite condensado", 0.20m), ("Creme de leite", 0.15m) }),
+        ("Maracujá trufado", 70m, new[] { ("Polpa de maracujá", 0.15m), ("Creme de leite", 0.20m), ("Leite condensado", 0.20m), ("Chocolate meio amargo", 0.08m) }),
     };
 
     private static readonly (string Nome, string WhatsApp)[] ClientesSeed =
@@ -249,35 +231,35 @@ public static class DevSeed
         // ---- Pedidos ----
         // (e) Dia lotado: 3 pedidos ativos (2 confirmados + 1 pendente) => RN06/RN07 bloqueiam a data.
         var lotado = diasUteis[1];
-        var l1 = await Criar(0, "Ganache", 2m, lotado, "Aniversário — retirar à tarde");
-        var l2 = await Criar(1, "Oreo", 1.5m, lotado);
-        var l3 = await Criar(2, "Mousse de chocolate", 3m, lotado);
+        var l1 = await Criar(0, "Prestígio trufado", 2m, lotado, "Aniversário — retirar à tarde");
+        var l2 = await Criar(1, "Leite ninho trufado", 1.5m, lotado);
+        var l3 = await Criar(2, "Maracujá trufado", 3m, lotado);
         await Confirmar(l1);
         await Confirmar(l2);
         resultado.DiaLotado = lotado;
 
         // (f) Estoque escasso de morango (2 kg): 3 pedidos confirmados o consomem (abatido na confirmação, RN12).
-        var m1 = await Criar(3, "Ninho com morango", 2m, diasUteis[0]);
-        var m2 = await Criar(4, "Sensação", 2m, diasUteis[2]);
-        var m3 = await Criar(5, "Red Velvet com 4 leites, com frutas em cima", 3m, diasUteis[2]);
+        var m1 = await Criar(3, "Leite ninho com morango", 2m, diasUteis[0]);
+        var m2 = await Criar(4, "Leite ninho com morango", 2m, diasUteis[2]);
+        var m3 = await Criar(5, "Leite ninho com morango", 3m, diasUteis[2]);
         await Confirmar(m1);
         await Confirmar(m2);
         await Confirmar(m3);
 
         // (c) Cancelado que estava Confirmado (gera AjusteCorrecao de estorno).
-        var c1 = await Criar(1, "Alpino", 2m, diasUteis[2]);
+        var c1 = await Criar(1, "Leite ninho trufado", 2m, diasUteis[2]);
         await Confirmar(c1);
         ExigirOk(await pedidoSvc.CancelarPedidoAsync(c1, ct), $"cancelar #{c1}");
 
         // (a) Pendentes de confirmação.
-        var p1 = await Criar(0, "Prestígio tradicional", 2m, diasUteis[0]);
-        var p2 = await Criar(3, "Ninho com paçoquinha", 1.5m, diasUteis[3]);
-        var p3 = await Criar(4, "Doce de leite com ameixas", 2.5m, diasUteis[5]);
-        // Pendente que estoura o Morango: saldo após confirmados e perda = 0,35 kg; este pedido
-        // consome 2 kg x 0,25 = 0,5 kg => faltam 0,15 kg (alerta RN15 em /Admin/Estoque/Alertas).
-        var p4 = await Criar(5, "Ninho com morango", 2m, diasUteis[4]);
+        var p1 = await Criar(0, "Prestígio trufado", 2m, diasUteis[0]);
+        var p2 = await Criar(3, "Maracujá trufado", 1.5m, diasUteis[3]);
+        var p3 = await Criar(4, "Leite ninho trufado", 2.5m, diasUteis[5]);
+        // Pendente que estoura o Morango: saldo após confirmados e perda = 0,05 kg; este pedido
+        // consome 2 kg x 0,25 = 0,5 kg => faltam 0,45 kg (alerta RN15 em /Admin/Estoque/Alertas).
+        var p4 = await Criar(5, "Leite ninho com morango", 2m, diasUteis[4]);
 
-        // (g) Pagamentos: sinal de 50% no pedido do dia lotado (Ganache) e integral na Sensação.
+        // (g) Pagamentos: sinal de 50% no pedido do dia lotado (Prestígio trufado) e integral no 2º pedido de morango.
         var ganache = await db.Pedidos.AsNoTracking().FirstAsync(p => p.Id == l1, ct);
         ExigirOk(await pagamentoSvc.RegistrarPagamentoAsync(l1, TipoPagamento.Sinal, Math.Round(ganache.ValorTotal / 2, 2), admin.Id, "Pix", ct), "sinal");
         var sensacao = await db.Pedidos.AsNoTracking().FirstAsync(p => p.Id == m2, ct);
@@ -298,7 +280,7 @@ public static class DevSeed
         resultado.Cenarios.Add($"Confirmados com abate de estoque: #{l1}, #{l2}, #{m1} ({diasUteis[0]:yyyy-MM-dd}), #{m2} e #{m3} ({diasUteis[2]:yyyy-MM-dd})");
         resultado.Cenarios.Add($"Cancelado que estava Confirmado (estorno de estoque): #{c1} ({diasUteis[2]:yyyy-MM-dd})");
         resultado.Cenarios.Add($"Pagamento parcial (sinal): #{l1}; pagamento integral: #{m2}");
-        resultado.Cenarios.Add($"Estoque escasso: Morango (2 kg inicial; confirmados consomem 1,45 kg + perda 0,2 kg => saldo 0,35 kg). A projeção RN14/RN15 roda sobre os PENDENTES: o pedido #{p4} (Ninho com morango, 2 kg, {diasUteis[4]:yyyy-MM-dd}) precisa de 0,5 kg e gera o alerta (faltam 0,15 kg) => /Admin/Estoque/Alertas");
+        resultado.Cenarios.Add($"Estoque escasso: Morango (2 kg inicial; confirmados consomem 1,75 kg + perda 0,2 kg => saldo 0,05 kg). A projeção RN14/RN15 roda sobre os PENDENTES: o pedido #{p4} (Leite ninho com morango, 2 kg, {diasUteis[4]:yyyy-MM-dd}) precisa de 0,5 kg e gera o alerta (faltam 0,45 kg) => /Admin/Estoque/Alertas");
         resultado.Avisos.Add("Fichas técnicas e ingredientes são FICTÍCIOS: substituir pelas fichas reais da Nilda (RN04).");
         resultado.Avisos.Add("Cenário 'Concluído' NÃO criado: IPedidoService não possui método para concluir pedido (lacuna).");
         return resultado;

@@ -38,6 +38,15 @@ function erroDeNegocio(err, padrao) {
   throw err;
 }
 
+/** POST /estado: informa o painel (QR code, conectado...). Falhas aqui nao derrubam o bot. */
+async function reportarEstado(estado, qr, numero) {
+  try {
+    await http.post('/internal/whatsapp-bot/estado', { estado, qr, numero });
+  } catch (err) {
+    console.error('[apiClient] Nao consegui informar o estado ao site:', err.message);
+  }
+}
+
 /** GET /status → { ativo } */
 async function getStatus() {
   const { data } = await http.get('/internal/whatsapp-bot/status');
@@ -128,6 +137,7 @@ async function buscarCep(cep) {
 
 module.exports = {
   getStatus,
+  reportarEstado,
   getMensagens,
   getSabores,
   getDatasDisponiveis,

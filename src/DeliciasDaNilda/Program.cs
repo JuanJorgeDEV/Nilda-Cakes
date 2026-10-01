@@ -45,6 +45,11 @@ builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IMensagemBotService, MensagemBotService>();
 builder.Services.AddScoped<IFinanceiroService, FinanceiroService>();
 
+// Bot do WhatsApp: o site sobe o processo Node junto e guarda o QR/estado da conexão.
+builder.Services.AddSingleton<WhatsAppBotProcess>();
+builder.Services.AddSingleton<IWhatsAppBotProcess>(sp => sp.GetRequiredService<WhatsAppBotProcess>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<WhatsAppBotProcess>());
+
 // Sessão simples usada apenas para a identificação simplificada de Cliente
 // (nome + WhatsApp, sem senha — RN01). O ADM (RN02) usa autenticação por
 // cookie de verdade, configurada abaixo.
