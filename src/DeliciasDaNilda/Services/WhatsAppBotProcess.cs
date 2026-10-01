@@ -146,7 +146,10 @@ public sealed class WhatsAppBotProcess : IWhatsAppBotProcess, IHostedService
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        if (_config.GetValue("WhatsAppBot:IniciarComOSite", true) && PastaDoBotExiste)
+        // Só reconecta sozinho se já existe sessão salva (sem QR). Sem sessão, o QR
+        // só é gerado quando a Nilda clica em "Conectar" no painel.
+        var temSessao = File.Exists(Path.Combine(_pasta, "auth_info", "creds.json"));
+        if (_config.GetValue("WhatsAppBot:IniciarComOSite", true) && PastaDoBotExiste && temSessao)
         {
             Iniciar();
         }
