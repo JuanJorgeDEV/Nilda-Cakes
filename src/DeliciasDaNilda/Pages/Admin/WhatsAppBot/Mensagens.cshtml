@@ -39,7 +39,19 @@
     </p>
 </div>
 
-@foreach (var m in Model.Mensagens)
+<ul class="nav nav-tabs mb-3" id="abas-mensagens" role="tablist" style="max-width:760px;">
+    @for (var i = 0; i < MensagensBotPadrao.Grupos.Count; i++)
+    {
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(i == 0 ? "active" : "")" id="aba-@i" data-bs-toggle="tab" data-bs-target="#grupo-@i" type="button" role="tab">@MensagensBotPadrao.Grupos[i].Titulo</button>
+        </li>
+    }
+</ul>
+<div class="tab-content">
+@for (var g = 0; g < MensagensBotPadrao.Grupos.Count; g++)
+{
+<div class="tab-pane fade @(g == 0 ? "show active" : "")" id="grupo-@g" role="tabpanel">
+@foreach (var m in Model.Mensagens.Where(x => MensagensBotPadrao.Grupos[g].Chaves.Contains(x.Definicao.Chave)))
 {
     var d = m.Definicao;
     var comErro = Model.ChaveComErro == d.Chave;
@@ -81,4 +93,21 @@
             <div class="small text-muted mb-1">Como a cliente vê (com dados de exemplo):</div>@MensagensBotPadrao.PreencherComExemplos(m.Atual)
         </div>
     </div>
+}
+</div>
+}
+</div>
+
+@section Scripts {
+    <script>
+        // Depois de salvar, a página volta com #chave: abre a aba que contém a mensagem.
+        (function () {
+            var alvo = location.hash && document.querySelector(location.hash);
+            var painel = alvo && alvo.closest('.tab-pane');
+            if (!painel) return;
+            var botao = document.querySelector('[data-bs-target="#' + painel.id + '"]');
+            if (botao) bootstrap.Tab.getOrCreateInstance(botao).show();
+            setTimeout(function () { alvo.scrollIntoView(); }, 200);
+        })();
+    </script>
 }

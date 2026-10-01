@@ -123,7 +123,22 @@ async function processarMensagem(sock, msg) {
 
   console.log(`[bot] Mensagem (${conteudo.tipo}) de ${mascarar(numero)}.`);
 
-  const respostas = await handleMessage(numero, conteudo.texto, { tipo: conteudo.tipo });
+  // "Digitando..." desde que a mensagem chega e renovado enquanto a resposta demora
+  // (o WhatsApp apaga o indicador em ~10s), para a cliente nao achar que o bot parou.
+  const digitando = async () => {
+    try {
+      await sock.presenceSubscribe(jid);
+      await sock.sendPresenceUpdate('composing', jid);
+    } catch (_) { /* indicador e so conforto */ }
+  };
+  await digitando();
+  const renovar = setInterval(digitando, 8000);
+  let respostas;
+  try {
+    respostas = await handleMessage(numero, conteudo.texto, { tipo: conteudo.tipo });
+  } finally {
+    clearInterval(renovar);
+  }
 
   // Ritmo humano: "digitando..." proporcional ao texto e pausa entre mensagens.
   // Reduz o risco de o WhatsApp tratar o numero como robo.
@@ -135,15 +150,20 @@ async function processarMensagem(sock, msg) {
     await sock.presenceSubscribe(jid);
     await sock.sendPresenceUpdate('composing', jid);
     await espera(Math.min(400 + tamanho * 12, 3500));
-    await sock.sendPresenceUpdate('paused', jid);
+    if (!ehFoto) await sock.sendPresenceUpdate('paused', jid);
 
     if (ehFoto) {
       const url = resposta.imagem.startsWith('/') ? API_BASE_URL + resposta.imagem : resposta.imagem;
+      // A foto pode demorar a baixar/enviar: mantem o "digitando" ate sair.
+      const manter = setInterval(digitando, 8000);
       try {
         await sock.sendMessage(jid, { image: { url }, caption: resposta.legenda });
       } catch (err) {
         console.error('[bot] Falha ao enviar foto:', err.message);
         await sock.sendMessage(jid, { text: resposta.legenda });
+      } finally {
+        clearInterval(manter);
+        await sock.sendPresenceUpdate('paused', jid);
       }
     } else {
       await sock.sendMessage(jid, { text: resposta });

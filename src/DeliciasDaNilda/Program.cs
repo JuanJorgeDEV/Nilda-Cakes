@@ -96,6 +96,8 @@ app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Fotos de sabores são enviadas em tempo de execução (wwwroot/uploads): precisam do middleware clássico.
+app.UseStaticFiles();
 app.MapStaticAssets();
 app.MapRazorPages()
    .WithStaticAssets();

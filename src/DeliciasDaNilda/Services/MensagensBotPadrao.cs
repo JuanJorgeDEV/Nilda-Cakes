@@ -80,6 +80,25 @@ public static class MensagensBotPadrao
 
     private static readonly string[] Nenhum = Array.Empty<string>();
 
+    /// <summary>Abas da tela de mensagens, na ordem em que aparecem, e as chaves de cada uma.</summary>
+    public static readonly IReadOnlyList<(string Titulo, string[] Chaves)> Grupos = new (string, string[])[]
+    {
+        ("Chegada", new[] { Chaves.Menu, Chaves.BotDesativado, Chaves.FalarComNilda, Chaves.SaboresTitulo, Chaves.SemSabores }),
+        ("Cadastro", new[] { Chaves.PerguntaNome, Chaves.NomeInvalido, Chaves.PerguntaCep, Chaves.CepInvalido, Chaves.CadastroConcluido }),
+        ("Pedido pelo WhatsApp", new[]
+        {
+            Chaves.PerguntaSabor, Chaves.PerguntaPeso, Chaves.PesoInvalido, Chaves.PerguntaData, Chaves.SemDatas,
+            Chaves.PerguntaObservacao, Chaves.ResumoTitulo, Chaves.ResumoConfirmacao, Chaves.ConfirmacaoInvalida,
+            Chaves.PedidoCancelado, Chaves.PedidoSucesso, Chaves.PedidoFalha
+        }),
+        ("Pedido do site", new[]
+        {
+            Chaves.PedidoSiteRecebido, Chaves.PedidoSiteNaoEncontrado, Chaves.PerguntaPersonalizacao,
+            Chaves.PersonalizacaoRecebida, Chaves.FotoRecebida, Chaves.PersonalizacaoFim
+        }),
+        ("Meus pedidos e avisos", new[] { Chaves.MeusPedidosTitulo, Chaves.SemPedidos, Chaves.ErroTemporario, Chaves.OpcaoInvalida }),
+    };
+
     public static readonly IReadOnlyList<MensagemBotDefinicao> Todas = new[]
     {
         new MensagemBotDefinicao(Chaves.Menu, "Menu principal",
