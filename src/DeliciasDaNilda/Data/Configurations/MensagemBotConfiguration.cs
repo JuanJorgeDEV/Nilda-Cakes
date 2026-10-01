@@ -30,6 +30,6 @@ public class MensagemBotConfiguration : IEntityTypeConfiguration<MensagemBot>
 
         builder.Property(m => m.AtualizadoEm)
             .IsRequired()
-            .HasDefaultValueSql("GETUTCDATE()");
+            .HasDefaultValueSql("(now() at time zone 'utc')");
     }
 }

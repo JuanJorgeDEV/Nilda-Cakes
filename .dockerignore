@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+**/.vs/
+.git/
+.claude/
+docs/
+CLAUDE.md
+Prompt e especificações de design/
+adminindex.html
+whatsapp-bot/node_modules/
+whatsapp-bot/auth_info/
+whatsapp-bot/.env
+src/DeliciasDaNilda/wwwroot/uploads/
+src/DeliciasDaNilda/appsettings.Development.json
+tests/

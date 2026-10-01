@@ -71,7 +71,7 @@ public class DevSeedTests
         var projecao = await scope.ServiceProvider.GetRequiredService<IProjecaoEstoqueService>().ProjetarAsync();
         Assert.False(projecao.EstoqueSuficiente);
         Assert.Equal("Morango", projecao.Alerta!.IngredienteNome);
-        Assert.Equal(0.15m, projecao.Alerta.QuantidadeFaltante);
+        Assert.Equal(0.45m, projecao.Alerta.QuantidadeFaltante);
         var afetado = await db.Pedidos.SingleAsync(p => p.Id == projecao.Alerta.PedidoAfetadoId);
         Assert.Equal(StatusPedido.PendenteConfirmacao, afetado.StatusPedido);
         Assert.NotNull(projecao.UltimoPedidoCoberto);

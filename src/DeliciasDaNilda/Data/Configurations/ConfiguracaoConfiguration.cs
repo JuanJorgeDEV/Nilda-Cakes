@@ -27,6 +27,6 @@ public class ConfiguracaoConfiguration : IEntityTypeConfiguration<Configuracao>
 
         builder.Property(c => c.AtualizadoEm)
             .IsRequired()
-            .HasDefaultValueSql("GETUTCDATE()");
+            .HasDefaultValueSql("(now() at time zone 'utc')");
     }
 }

@@ -28,7 +28,7 @@ public class PagamentoConfiguration : IEntityTypeConfiguration<Pagamento>
 
         builder.Property(p => p.CriadoEm)
             .IsRequired()
-            .HasDefaultValueSql("GETUTCDATE()");
+            .HasDefaultValueSql("(now() at time zone 'utc')");
 
         builder.HasOne(p => p.Pedido)
             .WithMany(ped => ped.Pagamentos)

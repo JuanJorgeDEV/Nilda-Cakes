@@ -30,7 +30,7 @@ public class MovimentoEstoqueConfiguration : IEntityTypeConfiguration<MovimentoE
 
         builder.Property(m => m.CriadoEm)
             .IsRequired()
-            .HasDefaultValueSql("GETUTCDATE()");
+            .HasDefaultValueSql("(now() at time zone 'utc')");
 
         builder.HasOne(m => m.Ingrediente)
             .WithMany(i => i.MovimentosEstoque)

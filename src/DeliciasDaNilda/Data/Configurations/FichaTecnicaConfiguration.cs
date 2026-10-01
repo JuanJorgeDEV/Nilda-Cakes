@@ -15,7 +15,7 @@ public class FichaTecnicaConfiguration : IEntityTypeConfiguration<FichaTecnica>
 
         builder.Property(f => f.CriadoEm)
             .IsRequired()
-            .HasDefaultValueSql("GETUTCDATE()");
+            .HasDefaultValueSql("(now() at time zone 'utc')");
 
         // 1-1 com Sabor (MVP não versiona — ver seção 5 do doc de modelagem).
         builder.HasOne(f => f.Sabor)

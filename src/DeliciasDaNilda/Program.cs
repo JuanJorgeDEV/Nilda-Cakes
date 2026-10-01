@@ -6,6 +6,9 @@ using DeliciasDaNilda.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 
+// Datas do sistema são gravadas em UTC "cru" (DateTime sem fuso): mantém o comportamento clássico do Npgsql.
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Exibição sempre em pt-BR (R$, datas), mesmo num servidor em outro idioma.
@@ -27,7 +30,16 @@ builder.Services.AddRazorPages(options =>
 });
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(PostgresConexao.Normalizar(builder.Configuration.GetConnectionString("DefaultConnection"))));
+
+// Atrás do proxy do Render/Supabase: respeita X-Forwarded-Proto/For.
+builder.Services.Configure<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor
+        | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // Services de domínio (RN03, RN05-RN15).
 builder.Services.AddScoped<IPrecificacaoService, PrecificacaoService>();
@@ -80,6 +92,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+app.UseForwardedHeaders();
 app.UseHttpsRedirection();
 
 app.UseRouting();
@@ -104,6 +117,9 @@ app.MapRazorPages()
 
 app.MapWhatsAppBotEndpoints();
 
+// Verificação de saúde para o Render e para o "pinger" que mantém o serviço acordado.
+app.MapGet("/saude", () => Results.Ok("ok")).AllowAnonymous();
+
 // SEED DE DESENVOLVIMENTO/PROTÓTIPO ACADÊMICO (RN02):
 // não existe cadastro público de Administrador (não deveria haver uma tela
 // aberta de "criar administrador" sem controle nenhum), então criamos o
@@ -116,6 +132,13 @@ app.MapWhatsAppBotEndpoints();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    // Em hospedagem (sem terminal para rodar "dotnet ef"), aplica as migrations ao subir.
+    if (app.Configuration.GetValue("Database:MigrarAoIniciar", false))
+    {
+        await db.Database.MigrateAsync();
+    }
+
     if (!await db.Administradores.AnyAsync())
     {
         var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
@@ -142,6 +165,13 @@ using (var scope = app.Services.CreateScope())
         });
         await db.SaveChangesAsync();
     }
+}
+
+// DEMONSTRAÇÃO: com Demo:Seed=true, popula um banco VAZIO (4 bolos, estoque e pedidos fictícios) ao subir.
+if (app.Configuration.GetValue("Demo:Seed", false))
+{
+    var demo = await DeliciasDaNilda.Data.DevSeed.ExecutarAsync(app.Services, app.Environment, reset: false, permitirForaDeDev: true);
+    Console.WriteLine(demo.Executado ? "Seed de demonstração aplicado." : "Seed de demonstração ignorado: " + demo.MotivoAborto);
 }
 
 // SEED DE DADOS DE TESTE (só sob demanda): `dotnet run -- --seed-dev [--reset]`.

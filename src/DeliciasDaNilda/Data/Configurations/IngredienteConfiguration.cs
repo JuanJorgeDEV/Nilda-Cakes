@@ -44,7 +44,7 @@ public class IngredienteConfiguration : IEntityTypeConfiguration<Ingrediente>
 
         builder.Property(i => i.CriadoEm)
             .IsRequired()
-            .HasDefaultValueSql("GETUTCDATE()");
+            .HasDefaultValueSql("(now() at time zone 'utc')");
 
         builder.HasIndex(i => i.Nome)
             .IsUnique()

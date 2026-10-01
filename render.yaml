@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: delicias-da-nilda
+    runtime: docker
+    plan: free
+    healthCheckPath: /saude
+    envVars:
+      # Supabase > Project Settings > Database > Connection string (Session pooler, URI)
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: AdminSeed__Email
+        sync: false
+      - key: AdminSeed__Senha
+        sync: false
+      - key: InternalApi__WhatsAppBotKey
+        generateValue: true
+      - key: Demo__Seed
+        value: "true"
+      - key: Loja__Instagram
+        sync: false

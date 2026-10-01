@@ -138,11 +138,11 @@ public static class DevSeed
     /// já houver sabores cadastrados, a menos que <paramref name="reset"/> seja true.
     /// </summary>
     public static async Task<DevSeedResultado> ExecutarAsync(
-        IServiceProvider services, IHostEnvironment env, bool reset, CancellationToken ct = default)
+        IServiceProvider services, IHostEnvironment env, bool reset, bool permitirForaDeDev = false, CancellationToken ct = default)
     {
         var resultado = new DevSeedResultado();
 
-        if (!env.IsDevelopment())
+        if (!env.IsDevelopment() && !permitirForaDeDev)
         {
             resultado.MotivoAborto = $"O seed de desenvolvimento só pode rodar no ambiente Development (atual: {env.EnvironmentName}). Nada foi alterado.";
             return resultado;

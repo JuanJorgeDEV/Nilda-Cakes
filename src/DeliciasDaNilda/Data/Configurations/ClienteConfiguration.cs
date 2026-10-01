@@ -34,7 +34,7 @@ public class ClienteConfiguration : IEntityTypeConfiguration<Cliente>
 
         builder.Property(c => c.CriadoEm)
             .IsRequired()
-            .HasDefaultValueSql("GETUTCDATE()");
+            .HasDefaultValueSql("(now() at time zone 'utc')");
 
         builder.HasIndex(c => c.WhatsApp)
             .IsUnique()

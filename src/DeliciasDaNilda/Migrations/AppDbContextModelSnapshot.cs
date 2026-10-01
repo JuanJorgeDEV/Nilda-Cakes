@@ -3,8 +3,8 @@ using System;
 using DeliciasDaNilda.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -18,44 +18,44 @@ namespace DeliciasDaNilda.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "10.0.12")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("DeliciasDaNilda.Domain.Entities.Administrador", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("Ativo")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
+                        .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
                     b.Property<DateTime>("CriadoEm")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("(now() at time zone 'utc')");
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(200)
                         .IsUnicode(false)
-                        .HasColumnType("varchar(200)");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("NomeCompleto")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                        .HasColumnType("character varying(150)");
 
                     b.Property<string>("SenhaHash")
                         .IsRequired()
                         .HasMaxLength(300)
                         .IsUnicode(false)
-                        .HasColumnType("varchar(300)");
+                        .HasColumnType("character varying(300)");
 
                     b.HasKey("Id");
 
@@ -70,38 +70,38 @@ namespace DeliciasDaNilda.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Bairro")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Cep")
                         .HasMaxLength(8)
                         .IsUnicode(false)
-                        .HasColumnType("varchar(8)");
+                        .HasColumnType("character varying(8)");
 
                     b.Property<string>("Cidade")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("CriadoEm")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("(now() at time zone 'utc')");
 
                     b.Property<string>("NomeCompleto")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                        .HasColumnType("character varying(150)");
 
                     b.Property<string>("WhatsApp")
                         .IsRequired()
                         .HasMaxLength(20)
                         .IsUnicode(false)
-                        .HasColumnType("varchar(20)");
+                        .HasColumnType("character varying(20)");
 
                     b.HasKey("Id");
 
@@ -116,24 +116,24 @@ namespace DeliciasDaNilda.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("AtualizadoEm")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("(now() at time zone 'utc')");
 
                     b.Property<bool>("WhatsAppBotAtivo")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
+                        .HasColumnType("boolean")
                         .HasDefaultValue(false);
 
                     b.Property<string>("WhatsAppLoja")
                         .HasMaxLength(20)
                         .IsUnicode(false)
-                        .HasColumnType("varchar(20)");
+                        .HasColumnType("character varying(20)");
 
                     b.HasKey("Id");
 
@@ -144,20 +144,20 @@ namespace DeliciasDaNilda.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime?>("AtualizadoEm")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime>("CriadoEm")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("(now() at time zone 'utc')");
 
                     b.Property<int>("SaborId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -172,19 +172,19 @@ namespace DeliciasDaNilda.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int>("FichaTecnicaId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("IngredienteId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("QuantidadePorKg")
                         .HasPrecision(10, 4)
-                        .HasColumnType("decimal(10,4)");
+                        .HasColumnType("numeric(10,4)");
 
                     b.HasKey("Id");
 
@@ -201,44 +201,44 @@ namespace DeliciasDaNilda.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int>("Categoria")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasDefaultValue(99);
 
                     b.Property<DateTime>("CriadoEm")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("(now() at time zone 'utc')");
 
                     b.Property<decimal?>("CustoPorUnidade")
                         .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
+                        .HasColumnType("numeric(10,2)");
 
                     b.Property<decimal?>("EstoqueMinimoAlerta")
                         .HasPrecision(12, 4)
-                        .HasColumnType("decimal(12,4)");
+                        .HasColumnType("numeric(12,4)");
 
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                        .HasColumnType("character varying(150)");
 
                     b.Property<decimal>("SaldoAtual")
                         .ValueGeneratedOnAdd()
                         .HasPrecision(12, 4)
-                        .HasColumnType("decimal(12,4)")
+                        .HasColumnType("numeric(12,4)")
                         .HasDefaultValue(0m);
 
                     b.Property<string>("UnidadeMedida")
                         .IsRequired()
                         .HasMaxLength(10)
                         .IsUnicode(false)
-                        .HasColumnType("varchar(10)");
+                        .HasColumnType("character varying(10)");
 
                     b.HasKey("Id");
 
@@ -253,24 +253,24 @@ namespace DeliciasDaNilda.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("AtualizadoEm")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("(now() at time zone 'utc')");
 
                     b.Property<string>("Chave")
                         .IsRequired()
                         .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)");
+                        .HasColumnType("character varying(60)");
 
                     b.Property<string>("Texto")
                         .IsRequired()
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("character varying(1000)");
 
                     b.HasKey("Id");
 
@@ -286,34 +286,34 @@ namespace DeliciasDaNilda.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<int?>("AdministradorId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CriadoEm")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("(now() at time zone 'utc')");
 
                     b.Property<int>("IngredienteId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("Motivo")
                         .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
+                        .HasColumnType("character varying(300)");
 
                     b.Property<int?>("PedidoId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("Quantidade")
                         .HasPrecision(12, 4)
-                        .HasColumnType("decimal(12,4)");
+                        .HasColumnType("numeric(12,4)");
 
                     b.Property<string>("Tipo")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasColumnType("character varying(30)");
 
                     b.HasKey("Id");
 
@@ -332,33 +332,33 @@ namespace DeliciasDaNilda.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CriadoEm")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("(now() at time zone 'utc')");
 
                     b.Property<string>("FormaPagamento")
                         .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasColumnType("character varying(30)");
 
                     b.Property<int>("PedidoId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("RegistradoPorAdministradorId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("Tipo")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("character varying(20)");
 
                     b.Property<decimal>("Valor")
                         .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
+                        .HasColumnType("numeric(10,2)");
 
                     b.HasKey("Id");
 
@@ -377,82 +377,82 @@ namespace DeliciasDaNilda.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int>("ClienteId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("ConfirmadoEm")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<int?>("ConfirmadoPorAdministradorId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CriadoEm")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("(now() at time zone 'utc')");
 
                     b.Property<DateOnly>("DataEntrega")
                         .HasColumnType("date");
 
                     b.Property<bool>("EhAniversario")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
+                        .HasColumnType("boolean")
                         .HasDefaultValue(false);
 
                     b.Property<TimeOnly?>("HorarioRetirada")
                         .HasColumnType("time");
 
                     b.Property<int?>("IdadeAniversariante")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("NomeAniversariante")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Observacoes")
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("Personalizacao")
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<decimal>("Peso")
                         .HasPrecision(6, 3)
-                        .HasColumnType("decimal(6,3)");
+                        .HasColumnType("numeric(6,3)");
 
                     b.Property<decimal>("PrecoPorKgUtilizado")
                         .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
+                        .HasColumnType("numeric(10,2)");
 
                     b.Property<int>("SaborId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("StatusPagamento")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
+                        .HasColumnType("character varying(20)")
                         .HasDefaultValue("SemPagamento");
 
                     b.Property<string>("StatusPedido")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)")
+                        .HasColumnType("character varying(30)")
                         .HasDefaultValue("PendenteConfirmacao");
 
                     b.Property<string>("Tema")
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<decimal>("ValorTotal")
                         .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
+                        .HasColumnType("numeric(10,2)");
 
                     b.HasKey("Id");
 
@@ -479,46 +479,46 @@ namespace DeliciasDaNilda.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime?>("AtualizadoEm")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime>("CriadoEm")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("(now() at time zone 'utc')");
 
                     b.Property<decimal?>("CustoExtraPorKg")
                         .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
+                        .HasColumnType("numeric(10,2)");
 
                     b.Property<string>("Descricao")
                         .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
+                        .HasColumnType("character varying(300)");
 
                     b.Property<bool>("Disponivel")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
+                        .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
                     b.Property<DateTime?>("ExcluidoEm")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("ImagemUrl")
                         .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
+                        .HasColumnType("character varying(300)");
 
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                        .HasColumnType("character varying(150)");
 
                     b.Property<decimal>("PrecoPorKg")
                         .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
+                        .HasColumnType("numeric(10,2)");
 
                     b.HasKey("Id");
 

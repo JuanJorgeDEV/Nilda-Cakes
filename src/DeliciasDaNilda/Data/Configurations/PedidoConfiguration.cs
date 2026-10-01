@@ -66,7 +66,7 @@ public class PedidoConfiguration : IEntityTypeConfiguration<Pedido>
 
         builder.Property(p => p.CriadoEm)
             .IsRequired()
-            .HasDefaultValueSql("GETUTCDATE()");
+            .HasDefaultValueSql("(now() at time zone 'utc')");
 
         builder.HasOne(p => p.Cliente)
             .WithMany(c => c.Pedidos)

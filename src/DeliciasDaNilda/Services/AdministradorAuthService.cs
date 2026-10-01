@@ -44,7 +44,7 @@ public class AdministradorAuthService : IAdministradorAuthService
         string email, string senha, CancellationToken ct = default)
     {
         var administrador = await _db.Administradores
-            .FirstOrDefaultAsync(a => a.Email == email && a.Ativo, ct);
+            .FirstOrDefaultAsync(a => a.Email.ToLower() == email.Trim().ToLower() && a.Ativo, ct);
 
         if (administrador is null)
         {

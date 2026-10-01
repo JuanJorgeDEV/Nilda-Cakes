@@ -33,7 +33,7 @@ public class AdministradorConfiguration : IEntityTypeConfiguration<Administrador
 
         builder.Property(a => a.CriadoEm)
             .IsRequired()
-            .HasDefaultValueSql("GETUTCDATE()");
+            .HasDefaultValueSql("(now() at time zone 'utc')");
 
         builder.HasIndex(a => a.Email)
             .IsUnique()

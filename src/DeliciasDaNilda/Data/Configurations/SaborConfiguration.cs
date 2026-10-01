@@ -27,7 +27,7 @@ public class SaborConfiguration : IEntityTypeConfiguration<Sabor>
 
         builder.Property(s => s.CriadoEm)
             .IsRequired()
-            .HasDefaultValueSql("GETUTCDATE()");
+            .HasDefaultValueSql("(now() at time zone 'utc')");
 
         builder.Property(s => s.Descricao)
             .HasMaxLength(300);
