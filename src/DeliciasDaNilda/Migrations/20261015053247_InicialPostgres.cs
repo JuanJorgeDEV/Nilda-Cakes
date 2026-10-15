@@ -166,7 +166,7 @@ namespace DeliciasDaNilda.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Pedidos", x => x.Id);
-                    table.CheckConstraint("CK_Pedidos_Peso_Positivo", "[Peso] > 0");
+                    table.CheckConstraint("CK_Pedidos_Peso_Positivo", "\"Peso\" > 0");
                     table.ForeignKey(
                         name: "FK_Pedidos_Administradores_ConfirmadoPorAdministradorId",
                         column: x => x.ConfirmadoPorAdministradorId,
@@ -267,7 +267,7 @@ namespace DeliciasDaNilda.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Pagamentos", x => x.Id);
-                    table.CheckConstraint("CK_Pagamentos_Valor_Positivo", "[Valor] > 0");
+                    table.CheckConstraint("CK_Pagamentos_Valor_Positivo", "\"Valor\" > 0");
                     table.ForeignKey(
                         name: "FK_Pagamentos_Administradores_RegistradoPorAdministradorId",
                         column: x => x.RegistradoPorAdministradorId,
@@ -378,7 +378,7 @@ namespace DeliciasDaNilda.Migrations
                 table: "Sabores",
                 column: "Nome",
                 unique: true,
-                filter: "[ExcluidoEm] IS NULL");
+                filter: "\"ExcluidoEm\" IS NULL");
         }
 
         /// <inheritdoc />

@@ -369,7 +369,7 @@ namespace DeliciasDaNilda.Migrations
 
                     b.ToTable("Pagamentos", null, t =>
                         {
-                            t.HasCheckConstraint("CK_Pagamentos_Valor_Positivo", "[Valor] > 0");
+                            t.HasCheckConstraint("CK_Pagamentos_Valor_Positivo", "\"Valor\" > 0");
                         });
                 });
 
@@ -471,7 +471,7 @@ namespace DeliciasDaNilda.Migrations
 
                     b.ToTable("Pedidos", null, t =>
                         {
-                            t.HasCheckConstraint("CK_Pedidos_Peso_Positivo", "[Peso] > 0");
+                            t.HasCheckConstraint("CK_Pedidos_Peso_Positivo", "\"Peso\" > 0");
                         });
                 });
 
@@ -525,7 +525,7 @@ namespace DeliciasDaNilda.Migrations
                     b.HasIndex("Nome")
                         .IsUnique()
                         .HasDatabaseName("UX_Sabores_Nome")
-                        .HasFilter("[ExcluidoEm] IS NULL");
+                        .HasFilter("\"ExcluidoEm\" IS NULL");
 
                     b.ToTable("Sabores", (string)null);
                 });

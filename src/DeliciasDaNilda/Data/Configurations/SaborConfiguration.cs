@@ -42,7 +42,7 @@ public class SaborConfiguration : IEntityTypeConfiguration<Sabor>
         // um sabor com o nome de um que foi excluído.
         builder.HasIndex(s => s.Nome)
             .IsUnique()
-            .HasFilter("[ExcluidoEm] IS NULL")
+            .HasFilter("\"ExcluidoEm\" IS NULL")
             .HasDatabaseName("UX_Sabores_Nome");
 
         // Sabor 1-N Pedido: nunca deletar em cascata (histórico de negócio).

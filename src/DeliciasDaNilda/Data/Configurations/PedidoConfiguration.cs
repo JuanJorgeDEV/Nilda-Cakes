@@ -13,7 +13,7 @@ public class PedidoConfiguration : IEntityTypeConfiguration<Pedido>
     public void Configure(EntityTypeBuilder<Pedido> builder)
     {
         builder.ToTable("Pedidos", t =>
-            t.HasCheckConstraint("CK_Pedidos_Peso_Positivo", "[Peso] > 0"));
+            t.HasCheckConstraint("CK_Pedidos_Peso_Positivo", "\"Peso\" > 0"));
 
         builder.HasKey(p => p.Id);
 

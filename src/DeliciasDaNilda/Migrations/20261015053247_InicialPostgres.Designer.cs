@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DeliciasDaNilda.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261001022536_InicialPostgres")]
+    [Migration("20261015053247_InicialPostgres")]
     partial class InicialPostgres
     {
         /// <inheritdoc />
@@ -372,7 +372,7 @@ namespace DeliciasDaNilda.Migrations
 
                     b.ToTable("Pagamentos", null, t =>
                         {
-                            t.HasCheckConstraint("CK_Pagamentos_Valor_Positivo", "[Valor] > 0");
+                            t.HasCheckConstraint("CK_Pagamentos_Valor_Positivo", "\"Valor\" > 0");
                         });
                 });
 
@@ -474,7 +474,7 @@ namespace DeliciasDaNilda.Migrations
 
                     b.ToTable("Pedidos", null, t =>
                         {
-                            t.HasCheckConstraint("CK_Pedidos_Peso_Positivo", "[Peso] > 0");
+                            t.HasCheckConstraint("CK_Pedidos_Peso_Positivo", "\"Peso\" > 0");
                         });
                 });
 
@@ -528,7 +528,7 @@ namespace DeliciasDaNilda.Migrations
                     b.HasIndex("Nome")
                         .IsUnique()
                         .HasDatabaseName("UX_Sabores_Nome")
-                        .HasFilter("[ExcluidoEm] IS NULL");
+                        .HasFilter("\"ExcluidoEm\" IS NULL");
 
                     b.ToTable("Sabores", (string)null);
                 });
